@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"slices"
 
 	imgmanifest "github.com/containers/image/v5/manifest"
 	"github.com/containers/storage"
