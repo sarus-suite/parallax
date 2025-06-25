@@ -53,6 +53,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: check sh
+        run: echo $PATH
+
       - name: Install go deps
         run: go get .
 
