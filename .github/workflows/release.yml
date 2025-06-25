@@ -24,7 +24,7 @@ jobs:
             wget \
             tar \
             gzip \
-            sh \
+            bash \
             git \
             btrfsprogs \
             device-mapper-devel \
