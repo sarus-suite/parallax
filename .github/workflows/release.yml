@@ -16,24 +16,23 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4.4.0
-
-      - name: Set up Go 1.22
-        uses: actions/setup-go@v4.2.0
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
-
-      - name: Download Go modules
-        run: go mod download
-
+          go-version: '>=1.22.0'
+      - name: Go dependencies
+        run: go get .
       - name: Cache Go modules
-        uses: actions/cache@v3.5.0
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cache/go-build
+            ~/go/pkg/mod
             ${{ env.GOPATH }}/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-
+          restore-keys: |
+            ${{ runner.os }}-go-
       - name: Build Linux binaries
         env:
           CGO_ENABLED: '0'
