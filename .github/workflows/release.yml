@@ -70,7 +70,7 @@ jobs:
 
       - name: Create GitHub Release
         id: release
-        uses: actions/create-release@v1.1.0
+        uses: actions/create-release@v1
         with:
           tag_name: ${{ github.ref_name }}
           release_name: Release ${{ github.ref_name }}
@@ -80,7 +80,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload amd64 binary
-        uses: actions/upload-release-asset@v1.1.0
+        uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.release.outputs.upload_url }}
           asset_path: dist/parallax-${{ github.ref_name }}-linux-amd64
@@ -88,7 +88,7 @@ jobs:
           asset_content_type: application/octet-stream
 
       - name: Upload arm64 binary
-        uses: actions/upload-release-asset@v1.1.0
+        uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.release.outputs.upload_url }}
           asset_path: dist/parallax-${{ github.ref_name }}-linux-arm64
