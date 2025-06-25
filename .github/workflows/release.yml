@@ -5,8 +5,7 @@ on:
     tags:
       - 'v*.*.*'
 
-permissions:
-  contents: write
+permissions: write-all
 
 jobs:
   build:
@@ -75,7 +74,7 @@ jobs:
           done
 
       - name: Create GitHub Release
-        id: release
+        id: create_release
         uses: actions/create-release@v1
         with:
           tag_name: ${{ github.ref_name }}
