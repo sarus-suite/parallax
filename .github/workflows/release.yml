@@ -14,6 +14,8 @@ jobs:
 
     container:
       image: opensuse/leap:15.5
+      env:
+        PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${{ env.PATH }}
 
     steps:
       - name: Ensure /usr/bin/sh exists
