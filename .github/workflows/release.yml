@@ -16,6 +16,9 @@ jobs:
       image: opensuse/leap:15.5
 
     steps:
+      - name: Ensure /usr/bin/sh exists
+        run: ln -s /bin/sh /usr/bin/sh || true
+
       - name: Install system dependencies
         run: |
           zypper --non-interactive refresh
@@ -24,7 +27,6 @@ jobs:
             wget \
             tar \
             gzip \
-            bash \
             git \
             btrfsprogs \
             device-mapper-devel \
