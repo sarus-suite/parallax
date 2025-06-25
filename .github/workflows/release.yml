@@ -18,9 +18,6 @@ jobs:
         PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${{ env.PATH }}
 
     steps:
-      - name: Ensure /usr/bin/sh exists
-        run: ln -s /bin/sh /usr/bin/sh || true
-
       - name: Install system dependencies
         run: |
           zypper --non-interactive refresh
@@ -67,6 +64,7 @@ jobs:
         env:
           CGO_ENABLED: '0'
           GOOS: linux
+          GOFLAGS: "-buildvcs=false"
         run: |
           mkdir -p dist
           for arch in amd64 arm64; do
