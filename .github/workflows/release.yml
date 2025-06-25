@@ -5,15 +5,14 @@ on:
     tags:
       - 'v*.*.*'
 
+permissions:
+  contents: write
+  actions: write
+  attestations: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-      permissions:
-        contents: write
-        actions: write
-        attestations: write
-        security-events: write
 
     container:
       image: opensuse/leap:15.5
