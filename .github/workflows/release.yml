@@ -39,7 +39,8 @@ jobs:
             squashfs \
             fuse-overlayfs \
             squashfuse \
-            inotify-tools
+            inotify-tools \
+            patterns-devel-base-devel_basis
 
       - name: Checkout code
         uses: actions/checkout@v4
