@@ -41,7 +41,9 @@ jobs:
             fuse-overlayfs \
             squashfuse \
             inotify-tools \
-            patterns-devel-base-devel_basis
+            patterns-devel-base-devel_basis \
+            gcc \
+            glibc-devel
 
       - name: Checkout code
         uses: actions/checkout@v4
