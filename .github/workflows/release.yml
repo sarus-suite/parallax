@@ -40,10 +40,7 @@ jobs:
             fuse-overlayfs \
             squashfuse \
             inotify-tools \
-            patterns-devel-base-devel_basis \
-            gcc \
-            glibc-devel \
-            binutils
+            patterns-devel-base-devel_basis
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -53,26 +50,23 @@ jobs:
         with:
           go-version: '1.24.0'
 
-      - name: Cache Go build & modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-            ${{ env.GOPATH }}/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: check sh
-        run: echo $PATH
+#      - name: Cache Go build & modules
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/.cache/go-build
+#            ~/go/pkg/mod
+#            ${{ env.GOPATH }}/pkg/mod
+#          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+#          restore-keys: |
+#            ${{ runner.os }}-go-
 
       - name: Install go deps
         run: go get .
 
       - name: Build Linux binaries
         env:
-          CGO_ENABLED: 1
+#          CGO_ENABLED: 1
           GOFLAGS: "-buildvcs=false"
           GOOS: linux
         run: |
