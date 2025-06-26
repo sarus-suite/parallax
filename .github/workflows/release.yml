@@ -68,8 +68,8 @@ jobs:
 
       - name: Build Linux binaries
         env:
+          CGO_ENABLED=1
           GOOS: linux
-          GOFLAGS: "-buildvcs=false"
         run: |
           mkdir -p dist
           for arch in amd64 arm64; do
