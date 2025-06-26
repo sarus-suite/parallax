@@ -74,6 +74,7 @@ jobs:
           for arch in amd64; do
             GOARCH=$arch go build \
               -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
+              -ldflags "-linkmode=external" \
               -o dist/parallax-${{ github.ref_name }}-linux-$arch \
               .
           done
