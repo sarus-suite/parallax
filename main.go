@@ -5,6 +5,8 @@ import (
 	"os"
 	"fmt"
 	"time"
+        // add a C import
+	"C"
 
 	"github.com/sirupsen/logrus"
 	"github.com/containers/storage/pkg/unshare"
