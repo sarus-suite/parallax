@@ -68,7 +68,6 @@ jobs:
 
       - name: Build Linux binaries
         env:
-          CGO_ENABLED: '0'
           GOOS: linux
           GOFLAGS: "-buildvcs=false"
         run: |
