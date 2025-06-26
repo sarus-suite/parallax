@@ -18,7 +18,13 @@
 ## Quick start
 ### 0. Install dependencies
 ~~~
-mksquashfs, fuse-overlayfs, squashfuse, inotifywait
+go >= 1.24
+libbtrfs-dev
+device-mapper-devel
+mksquashfs
+fuse-overlayfs
+squashfuse
+inotifywait
 ~~~
 
 ### 1. Build
