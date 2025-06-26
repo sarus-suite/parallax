@@ -69,6 +69,7 @@ jobs:
       - name: Build Linux binaries
         env:
           CGO_ENABLED: 1
+          GOFLAGS: "-buildvcs=false"
           GOOS: linux
         run: |
           mkdir -p dist
