@@ -68,7 +68,7 @@ jobs:
 
       - name: Build Linux binaries
         env:
-          CGO_ENABLED=1
+          CGO_ENABLED: 1
           GOOS: linux
         run: |
           mkdir -p dist
