@@ -323,7 +323,7 @@ func createSquashSidecarFromMount(srcDir, link string, cfg common.Config) error 
 		// TODO: how to expose options? particularly the compression?
 		cmd := exec.Command(cfg.MksquashfsPath,
 		srcDir, squashPath,
-		"-noappend", "-comp", "xz",
+		"-noappend", "-comp", "zstd", "-Xcompression-level", "1", "-noD", 
 		"-no-xattrs", "-e", "security.capability")
 		if out, err := cmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("mksquashfs: %v\n%s", err, out)
