@@ -74,7 +74,7 @@ jobs:
           GOOS: linux
         run: |
           mkdir -p dist
-          for arch in amd64 arm64; do
+          for arch in amd64; do
             GOARCH=$arch go build \
               -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
               -o dist/parallax-${{ github.ref_name }}-linux-$arch \
@@ -102,13 +102,13 @@ jobs:
           asset_name: parallax-${{ github.ref_name }}-linux-amd64
           asset_content_type: application/octet-stream
 
-      - name: Upload arm64 binary
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/parallax-${{ github.ref_name }}-linux-arm64
-          asset_name: parallax-${{ github.ref_name }}-linux-arm64
-          asset_content_type: application/octet-stream
+#      - name: Upload arm64 binary
+#        uses: actions/upload-release-asset@v1
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        with:
+#          upload_url: ${{ steps.create_release.outputs.upload_url }}
+#          asset_path: dist/parallax-${{ github.ref_name }}-linux-arm64
+#          asset_name: parallax-${{ github.ref_name }}-linux-arm64
+#          asset_content_type: application/octet-stream
 
