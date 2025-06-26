@@ -96,7 +96,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: dist/parallax-${{ github.ref_name }}-linux-amd64
           asset_name: parallax-${{ github.ref_name }}-linux-amd64
           asset_content_type: application/octet-stream
@@ -106,7 +106,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: dist/parallax-${{ github.ref_name }}-linux-arm64
           asset_name: parallax-${{ github.ref_name }}-linux-arm64
           asset_content_type: application/octet-stream
