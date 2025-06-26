@@ -93,6 +93,8 @@ jobs:
 
       - name: Upload amd64 binary
         uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.release.outputs.upload_url }}
           asset_path: dist/parallax-${{ github.ref_name }}-linux-amd64
@@ -101,6 +103,8 @@ jobs:
 
       - name: Upload arm64 binary
         uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.release.outputs.upload_url }}
           asset_path: dist/parallax-${{ github.ref_name }}-linux-arm64
