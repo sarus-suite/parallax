@@ -22,6 +22,7 @@ jobs:
         GITHUB_REPOSITORY: ${{ github.repository }}
         GITHUB_REF: ${{ github.ref }}
         GITHUB_EVENT_PATH: ${{ github.event_path }}
+        GO_VERSION: 1.24.0
 
     steps:
       - name: Install system dependencies
@@ -45,10 +46,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24.0'
+      - name: Install Go ${{ env.GO_VERSION }} (amd64)
+        run: |
+          wget https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz
+          sudo rm -rf /usr/local/go
+          sudo tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
+          rm go${GO_VERSION}.linux-amd64.tar.gz
+
+      - name: Add Go to PATH
+        run: echo "/usr/local/go/bin" >> $GITHUB_PATH
+
+      - name: Verify Go
+        run: |
+          go version
+          go env
+
+#      - name: Set up Go
+#        uses: actions/setup-go@v5
+#        with:
+#          go-version: '1.24.0'
 
 #      - name: Cache Go build & modules
 #        uses: actions/cache@v4
@@ -74,7 +90,6 @@ jobs:
           for arch in amd64; do
             GOARCH=$arch go build \
               -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
-              -ldflags "-linkmode=external" \
               -o dist/parallax-${{ github.ref_name }}-linux-$arch \
               .
           done
