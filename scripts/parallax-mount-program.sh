@@ -117,9 +117,9 @@ do_squash_mount() {
 
     if [ -h "$squash_file" ]; then
         run_and_log "Mounting squash file." squashfuse "$squash_file" "$target_dir" -o nonempty
-		if [ $? -ne 0 ]; then
-			handle_error "squashfuse failed"
-		fi
+        if [ $? -ne 0 ]; then
+            handle_error "squashfuse failed"
+        fi
     else
         log "INFO" "No squash file detected, skipping squash mount"
     fi
