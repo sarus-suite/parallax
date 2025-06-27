@@ -114,8 +114,12 @@ unmount_with_retries() {
 do_squash_mount() {
     local squash_file="$1"
     local target_dir="$2"
+
     if [ -h "$squash_file" ]; then
         run_and_log "Mounting squash file." squashfuse "$squash_file" "$target_dir" -o nonempty
+		if [ $? -ne 0 ]; then
+			handle_error "squashfuse failed"
+		fi
     else
         log "INFO" "No squash file detected, skipping squash mount"
     fi
