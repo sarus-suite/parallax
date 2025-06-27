@@ -21,9 +21,9 @@
 go >= 1.24
 libbtrfs-dev
 device-mapper-devel
-mksquashfs
 fuse-overlayfs
-squashfuse
+mksquashfs (with zstd support)
+squashfuse (with zstd support)
 inotifywait
 ~~~
 
