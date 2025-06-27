@@ -68,7 +68,7 @@ Note: using `--storage-opt` cli option makes podman ignore the default storage c
     podman \
         --root "/path/to/your/podmanroot" \
         --storage-opt additionalimagestore=/path/nfs/parallax/store \
-        ls
+        images
 ~~~
 
 ### 6. Remove an image
