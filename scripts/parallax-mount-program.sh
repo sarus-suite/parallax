@@ -180,7 +180,7 @@ run_and_log() {
     shift                    # Remove description from args
     local cmd=("$@")         # Get command
 
-	log "INFO" "Running: $cmd"
+	log "INFO" "Running ($description): ${cmd[*]}"
     output=$("${cmd[@]}" 2>&1)
     exit_code=$?
 
