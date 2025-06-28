@@ -1,0 +1,32 @@
+FROM opensuse/leap:15.5 AS builder
+LABEL org.opencontainers.image.source="https://github.com/sarus-suite/parallax/.github/containers/Containerfile.ci"
+
+# System dependencies
+RUN zypper --non-interactive refresh && \
+    zypper --non-interactive update -y && \
+    zypper --non-interactive install -y \
+        wget \
+        tar \
+        gzip \
+        git \
+        btrfsprogs \
+        device-mapper-devel \
+        libbtrfs-devel \
+        squashfs \
+        fuse-overlayfs \
+        squashfuse \
+        inotify-tools \
+        patterns-devel-base-devel_basis
+
+# Go toolchain
+ARG GO_VERSION=1.24.0
+RUN cd /tmp && \
+    wget https://go.dev/dl/go${GO_VERSION}.linux-arm64.tar.gz && \
+    rm -rf /usr/local/go && \
+    tar -C /usr/local -xzf go${GO_VERSION}.linux-arm64.tar.gz && \
+    rm go${GO_VERSION}.linux-arm64.tar.gz
+
+ENV PATH=$PATH:/usr/local/go/bin
+
+# Default entrypoint
+ENTRYPOINT ["bash"]
