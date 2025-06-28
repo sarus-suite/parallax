@@ -1,0 +1,50 @@
+name: Build & Publish CI Container
+
+on:
+  push: {}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      ci_changed: ${{ steps.filter.outputs.ci }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Detect CI‐container changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            ci:  
+              - '.github/containers/Containerfile.ci'
+              - '.github/containers/**'
+
+  build-and-push:
+    needs: changes
+    if: ${{ needs.changes.outputs.ci_changed == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@main
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build CI Container
+        run: |
+          docker build \
+              -f .github/containers/Containerfile.ci \
+              --tag ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/ci-runner:latest \
+              .
+          docker push ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/ci-runner:latest
+
