@@ -52,7 +52,7 @@ jobs:
         run: |
           mkdir -p dist
           for arch in amd64; do
-            GOARCH=$arch go build \
+            GOARCH=$arch go build -v -x \
               -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
               -o dist/parallax-${{ github.ref_name }}-linux-$arch \
               .
