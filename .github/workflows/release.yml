@@ -31,9 +31,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Verify Go
+      - name: Dump GO env
         run: |
-          go version
+          echo "--- all GO* vars ---"
+          env | grep '^GO'
+          echo "--- go env ---"
           go env
 
       - name: Install go deps
@@ -41,8 +43,12 @@ jobs:
 
       - name: Build Linux binaries
         env:
-          GOFLAGS: "-buildvcs=false"
+          CGO_ENABLED: "1"
+          CC: gcc
           GOOS: linux
+          GOFLAGS: "-buildvcs=false"
+          GO_LDFLAGS: "-linkmode external"
+          CGO_LDFLAGS: "-g -O2"
         run: |
           mkdir -p dist
           for arch in amd64; do
@@ -51,6 +57,12 @@ jobs:
               -o dist/parallax-${{ github.ref_name }}-linux-$arch \
               .
           done
+
+      - name: Inspect binary
+        run: |
+          file dist/parallax-${{ github.ref_name }}-linux-amd64
+          readelf -l dist/parallax-${{ github.ref_name }}-linux-amd64 | grep interpreter || true
+          ldd dist/parallax-${{ github.ref_name }}-linux-amd64 || echo "static :/"
 
       - name: Create GitHub Release
         id: create_release
