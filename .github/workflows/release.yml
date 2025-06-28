@@ -16,6 +16,9 @@ jobs:
 
     container:
       image: ghcr.io/sarus-suite/parallax/ci-runner:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
       env:
         PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${{ env.PATH }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
