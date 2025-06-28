@@ -15,76 +15,28 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: opensuse/leap:15.5
+      image: ghcr.io/sarus-suite/parallax/ci-runner:latest
       env:
         PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${{ env.PATH }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_REPOSITORY: ${{ github.repository }}
         GITHUB_REF: ${{ github.ref }}
         GITHUB_EVENT_PATH: ${{ github.event_path }}
-        GO_VERSION: 1.24.0
 
     steps:
-      - name: Install system dependencies
-        run: |
-          zypper --non-interactive refresh
-          zypper --non-interactive update -y
-          zypper --non-interactive install -y \
-            wget \
-            tar \
-            gzip \
-            git \
-            btrfsprogs \
-            device-mapper-devel \
-            libbtrfs-devel \
-            squashfs \
-            fuse-overlayfs \
-            squashfuse \
-            inotify-tools \
-            patterns-devel-base-devel_basis \
-            gcc \
-            glibc-devel
-
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Install Go ${{ env.GO_VERSION }} (amd64)
-        run: |
-          wget https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz
-          rm -rf /usr/local/go
-          tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
-          rm go${GO_VERSION}.linux-amd64.tar.gz
-
-      - name: Add Go to PATH
-        run: echo "/usr/local/go/bin" >> $GITHUB_PATH
 
       - name: Verify Go
         run: |
           go version
           go env
 
-#      - name: Set up Go
-#        uses: actions/setup-go@v5
-#        with:
-#          go-version: '1.24.0'
-
-#      - name: Cache Go build & modules
-#        uses: actions/cache@v4
-#        with:
-#          path: |
-#            ~/.cache/go-build
-#            ~/go/pkg/mod
-#            ${{ env.GOPATH }}/pkg/mod
-#          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
-
       - name: Install go deps
         run: go get .
 
       - name: Build Linux binaries
         env:
-#          CGO_ENABLED: 1
           GOFLAGS: "-buildvcs=false"
           GOOS: linux
         run: |
