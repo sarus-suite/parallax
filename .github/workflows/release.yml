@@ -34,7 +34,7 @@ jobs:
       - name: Dump GO env
         run: |
           echo "--- all GO* vars ---"
-          env | grep '^GO'
+          env | grep '^GO' || true
           echo "--- go env ---"
           go env
 
