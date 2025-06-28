@@ -16,8 +16,8 @@ jobs:
         id: filter
         uses: dorny/paths-filter@v3
         with:
-          filters:
-            ci:  |
+          filters: |
+            ci:  
               - '.github/containers/Containerfile.ci'
               - '.github/containers/**'
 
