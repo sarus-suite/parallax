@@ -94,8 +94,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          files: dist/parallax-${{ github.ref_name }}-ubuntu-*-*
-          overwrite: true
+          artifacts: dist/parallax-${{ github.ref_name }}-ubuntu-*-*
+          allowUpdates: true
+          replacesArtifacts: true
           draft: false
           prerelease: false
 
