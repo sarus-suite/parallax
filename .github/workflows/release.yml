@@ -1,4 +1,4 @@
-name: Release
+name: Release opensuse amd64
 
 on:
   push:
@@ -54,44 +54,25 @@ jobs:
           for arch in amd64; do
             GOARCH=$arch go build -v -x \
               -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
-              -o dist/parallax-${{ github.ref_name }}-linux-$arch \
+              -o dist/parallax-${{ github.ref_name }}-opensuse-15.5-$arch \
               .
           done
 
       - name: Inspect binary
         run: |
-          file dist/parallax-${{ github.ref_name }}-linux-amd64
-          readelf -l dist/parallax-${{ github.ref_name }}-linux-amd64 | grep interpreter || true
-          ldd dist/parallax-${{ github.ref_name }}-linux-amd64 || echo "static :/"
+          file dist/parallax-${{ github.ref_name }}-opensuse-15.5-amd64
+          readelf -l dist/parallax-${{ github.ref_name }}-opensuse-15.5-amd64 | grep interpreter || true
+          ldd dist/parallax-${{ github.ref_name }}-opensuse-15.5-amd64 || echo "static :/"
 
-      - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Create or Update GitHub Release and Upload Asset
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: ${{ github.ref_name }}-a
-          release_name: Release ${{ github.ref_name }}-a
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          artifacts: dist/parallax-${{ github.ref_name }}-opensuse-15.5-*-*
+          allowUpdates: true
+          replacesArtifacts: true
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload amd64 binary
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/parallax-${{ github.ref_name }}-linux-amd64
-          asset_name: parallax-${{ github.ref_name }}-linux-amd64
-          asset_content_type: application/octet-stream
-
-#      - name: Upload arm64 binary
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
-#          asset_path: dist/parallax-${{ github.ref_name }}-linux-arm64
-#          asset_name: parallax-${{ github.ref_name }}-linux-arm64
-#          asset_content_type: application/octet-stream
 
