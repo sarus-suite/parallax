@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  actions: write
+  attestations: write
+  packages: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      GITHUB_REF: ${{ github.ref }}
+      GITHUB_EVENT_PATH: ${{ github.event_path }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            lsb-release \
+            wget \
+            tar \
+            gzip \
+            git \
+            btrfs-progs \
+            libbtrfs-dev \
+            lvm2 \
+            libdevmapper-dev \
+            squashfs-tools \
+            fuse-overlayfs \
+            squashfuse \
+            inotify-tools \
+            build-essential
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.0'
+          check-latest: true
+
+            #      - name: Dump GO env
+            #        run: |
+            #          echo "--- all GO* vars ---"
+            #          env | grep '^GO' || true
+            #          echo "--- go env ---"
+            #          go env
+
+      - name: Install go deps
+        run: go get ./...
+
+      - name: Build Linux binaries (with Ubuntu version)
+        env:
+          CGO_ENABLED: "1"
+          CC: gcc
+          GOOS: linux
+          GOFLAGS: "-buildvcs=false"
+          GO_LDFLAGS: "-linkmode external"
+          CGO_LDFLAGS: "-g -O2"
+        run: |
+          # version for tag
+          VER="$(lsb_release -rs)"
+          mkdir -p dist
+          HOST_ARCH=$(go env GOHOSTARCH)
+          OUT="parallax-${{ github.ref_name }}-ubuntu-${VER}-${HOST_ARCH}"
+          echo "Building $OUT"
+          GOARCH=$HOST_ARCH go build -v -x \
+              -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
+              -o dist/$OUT \
+              .
+
+      - name: Inspect binary
+        run: |
+          VER="$(lsb_release -rs)"
+          HOST_ARCH=$(go env GOHOSTARCH)
+          OUT="parallax-${{ github.ref_name }}-ubuntu-${VER}-${HOST_ARCH}"
+          file dist/$OUT
+          readelf -l dist/$OUT | grep interpreter || true
+          ldd dist/$OUT || echo "static :/"
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist/parallax-${{ github.ref_name }}-ubuntu-$(lsb_release -rs)-${HOST_ARCH}
+          asset_name: parallax-${{ github.ref_name }}-ubuntu-$(lsb_release -rs)-${HOST_ARCH}
+          asset_content_type: application/octet-stream
+
