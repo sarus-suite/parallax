@@ -70,7 +70,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          artifacts: dist/parallax-${{ github.ref_name }}-opensuse-15.5-*-*
+          artifacts: dist/parallax-${{ github.ref_name }}-opensuse-15.5-*
           allowUpdates: true
           replacesArtifacts: false
           draft: false
