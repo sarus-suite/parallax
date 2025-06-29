@@ -72,7 +72,7 @@ jobs:
           name: Release ${{ github.ref_name }}
           artifacts: dist/parallax-${{ github.ref_name }}-opensuse-15.5-*-*
           allowUpdates: true
-          replacesArtifacts: true
+          replacesArtifacts: false
           draft: false
           prerelease: false
 

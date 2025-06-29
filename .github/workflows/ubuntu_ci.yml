@@ -96,7 +96,7 @@ jobs:
           name: Release ${{ github.ref_name }}
           artifacts: dist/parallax-${{ github.ref_name }}-ubuntu-*-*
           allowUpdates: true
-          replacesArtifacts: true
+          replacesArtifacts: false
           draft: false
           prerelease: false
 
