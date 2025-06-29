@@ -36,3 +36,4 @@ ENV PATH=$PATH:/usr/local/go/bin
 
 # Default entrypoint
 ENTRYPOINT ["bash"]
+
