@@ -1,4 +1,4 @@
-name: Release opensuse amd64
+name: Release opensuse amd64 and arm64
 
 on:
   push:
@@ -14,10 +14,19 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            container_opts: "--platform linux/amd64"
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            container_opts: "--platform linux/arm64"
+    runs-on: ${{ matrix.runner }}
     container:
       image: ghcr.io/sarus-suite/parallax/ci-runner:latest
+      options: ${{ matrix.container_opts }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -41,28 +50,27 @@ jobs:
       - name: Install go deps
         run: go get .
 
-      - name: Build Linux binaries
+      - name: Build Linux binary ${{ matrix.arch }}
         env:
           CGO_ENABLED: "1"
           CC: gcc
+          GOARCH: ${{ matrix.arch }}
           GOOS: linux
           GOFLAGS: "-buildvcs=false"
           GO_LDFLAGS: "-linkmode external"
           CGO_LDFLAGS: "-g -O2"
         run: |
           mkdir -p dist
-          for arch in amd64; do
-            GOARCH=$arch go build -v -x \
+          go build -v -x \
               -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
-              -o dist/parallax-${{ github.ref_name }}-opensuse-15.5-$arch \
+              -o dist/parallax-${{ github.ref_name }}-opensuse-15.5-${{ matrix.arch }} \
               .
-          done
 
       - name: Inspect binary
         run: |
-          file dist/parallax-${{ github.ref_name }}-opensuse-15.5-amd64
-          readelf -l dist/parallax-${{ github.ref_name }}-opensuse-15.5-amd64 | grep interpreter || true
-          ldd dist/parallax-${{ github.ref_name }}-opensuse-15.5-amd64 || echo "static :/"
+          file dist/parallax-${{ github.ref_name }}-opensuse-15.5-${{ matrix.arch }}
+          readelf -l dist/parallax-${{ github.ref_name }}-opensuse-15.5-${{ matrix.arch }} | grep interpreter || true
+          ldd dist/parallax-${{ github.ref_name }}-opensuse-15.5-${{ matrix.arch }} || echo "static :/"
 
       - name: Create or Update GitHub Release and Upload Asset
         uses: ncipollo/release-action@v1
@@ -70,7 +78,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          artifacts: dist/parallax-${{ github.ref_name }}-opensuse-15.5-*
+          artifacts: dist/parallax-${{ github.ref_name }}-opensuse-15.5-${{ matrix.arch }}
           allowUpdates: true
           replacesArtifacts: false
           draft: false
