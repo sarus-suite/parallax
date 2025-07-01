@@ -1,0 +1,37 @@
+name: Release mount program
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  actions: write
+  attestations: write
+  packages: read
+
+
+jobs:
+  upload-script:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package mount program
+        run: |
+          mkdir -p dist
+          cp scripts/parallax-mount-program.sh \
+            dist/parallax-mount-program-${{ github.ref_name }}.sh
+
+      - name: Upload mount program
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }} mount program
+          artifacts: dist/parallax-mount-program-${{ github.ref_name }}.sh
+          allowUpdates: true
+          replacesArtifacts: false
+          draft: false
+          prerelease: false
+
