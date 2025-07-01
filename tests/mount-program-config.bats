@@ -62,9 +62,9 @@ EOF
 
   # Run mount program using config
   run env PARALLAX_MP_CONFIG="$TEST_DIR/parallax-mount.conf" \
-      bash -x "$TEST_DIR/parallax-mount-program.sh" \
-      --lowerdir="$LOWERDIR" --upperdir="$UPPERRDIR" \
-      --workdir="$WORKDIR" "$MNTPOINT"
+	  bash -x "$TEST_DIR/parallax-mount-program.sh" \
+      "lowerdir=$LOWERDIR,upperdir=$UPPERRDIR,workdir=$WORKDIR" \
+	  "$MNTPOINT"
 
   # We should expect to see the custom commands in output
   [[ "$output" =~ custom-squashfuse ]] || {
@@ -91,8 +91,8 @@ EOF
 
   # Run mount program
   run bash -x "$TEST_DIR/parallax-mount-program.sh" \
-      --lowerdir="$LOWERDIR" --upperdir="$UPPERRDIR" \
-      --workdir="$WORKDIR" "$MNTPOINT"
+      "lowerdir=$LOWERDIR,upperdir=$UPPERRDIR,workdir=$WORKDIR" \
+	  "$MNTPOINT"
 
   # Check env override
   [[ "$output" =~ env-squashfuse ]]
@@ -110,18 +110,20 @@ EOF
   echo "keep me" > "$LOWERDIR/content/etc/important.conf"
   mksquashfs "$LOWERDIR/content" "${LOWERDIR}.squash" -noappend -no-progress >/dev/null
 
+  export PARALLAX_MP_SQUASHFUSE_CMD="squashfuse"
+  export PARALLAX_MP_FUSE_OVERLAYFS_CMD="fuse-overlayfs"
+  export PARALLAX_MP_INOTIFYWAIT_CMD="inotifywait"
+
   # Launch the mount program in background
   bash -x "$TEST_DIR/parallax-mount-program.sh" \
-    --lowerdir="$LOWERDIR" \
-    --upperdir="$UPPERRDIR" \
-    --workdir="$WORKDIR" \
-    "$MNTPOINT" &
+      "lowerdir=$LOWERDIR,upperdir=$UPPERRDIR,workdir=$WORKDIR" \
+	  "$MNTPOINT"
   pid=$!
 
   # Give it a moment to finish mounting
   sleep 3
-  run mountpoint -q "$MNTPOINT"
-  [ "$status" -eq 0 ]
+  mountpoint -q "$MNTPOINT"
+  [ "$?" -eq 0 ]
 
   # Now simulate container teardown by deleting the etc directory
   rm -rf "$MNTPOINT/etc"
