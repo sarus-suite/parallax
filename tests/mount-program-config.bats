@@ -105,17 +105,21 @@ EOF
   UPPERRDIR="$TEST_DIR/upperdir"
   WORKDIR="$TEST_DIR/workdir"
   MNTPOINT="$TEST_DIR/mnt"
-  mkdir -p "$LOWERDIR" "$UPPERRDIR" "$WORKDIR" "$MNTPOINT"
+  BINDIR="$TEST_DIR/bin"
+  mkdir -p "$LOWERDIR" "$UPPERRDIR" "$WORKDIR" "$MNTPOINT" "$BINDIR"
 
   # Remove config and unset vars
   rm -f "$TEST_DIR/parallax-mount.conf"
   unset PARALLAX_MP_SQUASHFUSE_CMD PARALLAX_MP_FUSE_OVERLAYFS_CMD
 
   # Restrict PATH so only stub squashfuse is found
-  export PATH="$TEST_DIR/bin"
+  export PATH="$BINDIR"
 
-  # Provide only squashfuse stub, omitting fuse-overlayfs
-  mv "$TEST_DIR/bin/env-squashfuse" "$TEST_DIR/bin/squashfuse"
+  # Provide only squashfuse stub, no fuse-overlayfs
+  echo '#!/usr/bin/env bash
+  echo squashfuse
+  ' > "$BINDIR/squashfuse"
+  chmod +x "$BINDIR/bin/squashfuse"
 
   run bash -x "$TEST_DIR/parallax-mount-program.sh" \
       "-o lowerdir=$LOWERDIR,upperdir=$UPPERRDIR,workdir=$WORKDIR" \
@@ -125,3 +129,4 @@ EOF
   [[ "$output" =~ "fuse-overlayfs not found" ]] || [[ "$output" =~ "command not found" ]]
   [[ ! "$output" =~ squashfuse-from-path ]]
 }
+
