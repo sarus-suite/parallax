@@ -20,6 +20,26 @@ setup() {
   # Copy mount program into test directory
   cp "$PWD/scripts/parallax-mount-program.sh" "$TEST_DIR/"
   chmod +x "$TEST_DIR/parallax-mount-program.sh"
+
+  echo '#!/usr/bin/env bash
+  echo custom-fuse-overlayfs
+  ' > "$TEST_DIR/bin/custom-fuse-overlayfs"
+  chmod +x "$TEST_DIR/bin/custom-fuse-overlayfs"
+
+  echo '#!/usr/bin/env bash
+  echo custom-squashfuse
+  ' > "$TEST_DIR/bin/custom-squashfuse"
+  chmod +x "$TEST_DIR/bin/custom-squashfuse"
+
+  echo '#!/usr/bin/env bash
+  echo env-fuse-overlayfs
+  ' > "$TEST_DIR/bin/env-fuse-overlayfs"
+  chmod +x "$TEST_DIR/bin/env-fuse-overlayfs"
+
+  echo '#!/usr/bin/env bash
+  echo env-squashfuse
+  ' > "$TEST_DIR/bin/env-squashfuse"
+  chmod +x "$TEST_DIR/bin/env-squashfuse"
 }
 
 teardown() {
@@ -36,8 +56,8 @@ teardown() {
 
   # Test config file to override commands
   cat <<EOF > "$TEST_DIR/parallax-mount.conf"
-PARALLAX_MP_SQUASHFUSE_CMD="echo custom-squashfuse"
-PARALLAX_MP_FUSE_OVERLAYFS_CMD="echo custom-fuse-overlayfs"
+PARALLAX_MP_SQUASHFUSE_CMD="custom-squashfuse"
+PARALLAX_MP_FUSE_OVERLAYFS_CMD="custom-fuse-overlayfs"
 EOF
 
   # Run mount program using config
@@ -47,7 +67,12 @@ EOF
       --workdir="$WORKDIR" "$MNTPOINT"
 
   # We should expect to see the custom commands in output
-  [[ "$output" =~ custom-squashfuse ]]
+  [[ "$output" =~ custom-squashfuse ]] || {
+    echo "=== MOUNT-PROG STDOUT/ERR ==="
+    echo "$output"
+    echo "============================="
+    return 1
+  }
   [[ "$output" =~ custom-fuse-overlayfs ]]
 }
 
@@ -61,8 +86,8 @@ EOF
   rm -f "$TEST_DIR/parallax-mount.conf"
 
   # Override commands via ENV VARs
-  export PARALLAX_MP_SQUASHFUSE_CMD="echo env-squashfuse"
-  export PARALLAX_MP_FUSE_OVERLAYFS_CMD="echo env-fuse-overlayfs"
+  export PARALLAX_MP_SQUASHFUSE_CMD="env-squashfuse"
+  export PARALLAX_MP_FUSE_OVERLAYFS_CMD="env-fuse-overlayfs"
 
   # Run mount program
   run "$TEST_DIR/parallax-mount-program.sh" \

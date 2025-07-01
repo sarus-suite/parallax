@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Usage: --storage-opt mount_program=/path/to/parallax-mount-program.sh
 #
