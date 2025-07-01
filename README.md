@@ -10,10 +10,21 @@
 * Pull-once, run-everywhere. Using Podman in a cluster does not require pulling iamges on every node, instead run directly from shared FS.
 
 ## How it works?
-1. Migrate your container image to a shared, read-only store.
-2. Integrates with Podman via our custom mount\_program script that provides overlay + SquashFS support.
-3. Easy management. Listing and removing image data from the store.
+Parallax leverages existing container libraries for image handling, and a lightweight Bash wrapper to integrate SquashFS into Podman’s overlay driver—no C code or recompilation of Podman required.
 
+* Migrate your container image to a shared, read-only store (parallax --migrate):
+    * Pull & mount source image.
+    * Flatten into a dummy layer + generate SquashFS side-car.
+    * Record layer link in the read-only store.
+* Integrates with Podman overlay storage driver via our custom mount\_program script that provides overlay + SquashFS support.
+    * Enables HPC containers via Podman
+    * Use with Podman --storage-opt additionalimagestore=… --storage-opt mount\_program=…/parallax-mount-program.sh.
+    * Podman’s overlay driver invokes Parallax mount program instead of the overlay driver default.
+    * Parallax mount program transparently mounts and overlays the SquashFS layer for your container, then it automatically unmounts when the container exits.
+* Easy management. Listing and removing image data from the store.
+    * Finds the migrated image in the store.
+    * Deletes the SquashFS side-car files.
+    * Removes the image record from the store.
 
 ## Quick start
 ### 0. Install dependencies
@@ -110,4 +121,24 @@ Use the provided script [`scripts/parallax-mount-program.sh`](scripts/parallax-m
 * Explicit CLI interface. Uses Go core flag package, for simplicity.
 * Robust logging. Structured logging via logrus library, for enhancing debugging and monitoring.
 * Strong Error Handling. We try to enforce good use of error handling, explicit logging of issues, and graceful shutdowns.
+
+## Disclaimers
+
+1. **Linux kernel & FUSE required**  
+   Parallax only works on Linux with a modern kernel and FUSE support. You must install both `squashfuse` and `fuse-overlayfs`.
+
+2. **Unmount delays**  
+   The mount program uses `inotifywait` to detect container exit and unmount SquashFS layers. On very busy, NFS, or parallel-fs setups, unmounts may not be instantaneous.
+
+3. **Read-only store**
+   All migrated images live in a read-only SquashFS store; container writes happen in an overlay “upper” layer. **Do not** manually delete `.squash` side-cars directly, use the rmi command to prevent store corruption.
+
+4. **Image size reporting**
+   Podman reports only an empty layer size, not the actual compressed SquashFS image.
+
+5. **Logging path**
+   By default, logs are written to `/tmp/parallax-<UID>/mount_program.log`. Ensure this directory is writable and periodically cleaned to avoid filling `/tmp`.
+
+6. **Rootless only**
+   Parallax has been tested only in a rootless Podman (user-namespace) setup. Running as root is untested and may require extra privileges.
 
