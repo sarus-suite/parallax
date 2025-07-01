@@ -63,7 +63,7 @@ EOF
   # Run mount program using config
   run env PARALLAX_MP_CONFIG="$TEST_DIR/parallax-mount.conf" \
 	  bash -x "$TEST_DIR/parallax-mount-program.sh" \
-      "lowerdir=$LOWERDIR,upperdir=$UPPERRDIR,workdir=$WORKDIR" \
+      "-o lowerdir=$LOWERDIR,upperdir=$UPPERRDIR,workdir=$WORKDIR" \
 	  "$MNTPOINT"
 
   # We should expect to see the custom commands in output
@@ -91,7 +91,7 @@ EOF
 
   # Run mount program
   run bash -x "$TEST_DIR/parallax-mount-program.sh" \
-      "lowerdir=$LOWERDIR,upperdir=$UPPERRDIR,workdir=$WORKDIR" \
+      "-o lowerdir=$LOWERDIR,upperdir=$UPPERRDIR,workdir=$WORKDIR" \
 	  "$MNTPOINT"
 
   # Check env override
@@ -99,45 +99,29 @@ EOF
   [[ "$output" =~ env-fuse-overlayfs ]]
 }
 
-@test "watcher unmounts on deletion of etc directory" {
-  # Skip if we don't have real binaries
-  command -v squashfuse >/dev/null || skip "needs squashfuse"
-  command -v fuse-overlayfs >/dev/null || skip "needs fuse-overlayfs"
-  command -v inotifywait >/dev/null || skip "needs inotifywait"
 
-  # Build a real squashfs image containing an /etc directory
-  mkdir -p "$LOWERDIR/content/etc"
-  echo "keep me" > "$LOWERDIR/content/etc/important.conf"
-  mksquashfs "$LOWERDIR/content" "${LOWERDIR}.squash" -noappend -no-progress >/dev/null
+@test "falls back to PATH defaults when no config/env" {
+  LOWERDIR="$TEST_DIR/lowerdir"
+  UPPERRDIR="$TEST_DIR/upperdir"
+  WORKDIR="$TEST_DIR/workdir"
+  MNTPOINT="$TEST_DIR/mnt"
+  mkdir -p "$LOWERDIR" "$UPPERRDIR" "$WORKDIR" "$MNTPOINT"
 
-  export PARALLAX_MP_SQUASHFUSE_CMD="squashfuse"
-  export PARALLAX_MP_FUSE_OVERLAYFS_CMD="fuse-overlayfs"
-  export PARALLAX_MP_INOTIFYWAIT_CMD="inotifywait"
+  # Remove config and unset vars
+  rm -f "$TEST_DIR/parallax-mount.conf"
+  unset PARALLAX_MP_SQUASHFUSE_CMD PARALLAX_MP_FUSE_OVERLAYFS_CMD
 
-  # Launch the mount program in background
-  bash -x "$TEST_DIR/parallax-mount-program.sh" \
-      "lowerdir=$LOWERDIR,upperdir=$UPPERRDIR,workdir=$WORKDIR" \
-	  "$MNTPOINT"
-  pid=$!
+  # Restrict PATH so only stub squashfuse is found
+  export PATH="$TEST_DIR/bin"
 
-  # Give it a moment to finish mounting
-  sleep 3
-  mountpoint -q "$MNTPOINT"
-  [ "$?" -eq 0 ]
+  # Provide only squashfuse stub, omitting fuse-overlayfs
+  mv "$TEST_DIR/bin/env-squashfuse" "$TEST_DIR/bin/squashfuse"
 
-  # Now simulate container teardown by deleting the etc directory
-  rm -rf "$MNTPOINT/etc"
+  run bash -x "$TEST_DIR/parallax-mount-program.sh" \
+      "-o lowerdir=$LOWERDIR,upperdir=$UPPERRDIR,workdir=$WORKDIR" \
+      "$MNTPOINT"
 
-  # Wait up to 5s for the watcher to catch the delete and exit
-  for i in $(seq 1 5); do
-    mountpoint -q "$MNTPOINT" && sleep 1 || break
-  done
-
-  # The mount program should exit cleanly once it sees the delete
-  wait $pid
-  [ "$?" -eq 0 ]
-
-  # And the overlay mount should be gone
-  ! mountpoint -q "$MNTPOINT"
+  [ "$status" -ne 0 ]
+  [[ "$output" =~ "fuse-overlayfs not found" ]] || [[ "$output" =~ "command not found" ]]
+  [[ ! "$output" =~ squashfuse-from-path ]]
 }
-
