@@ -31,7 +31,12 @@ if [ -r "$CONFIG_FILE" ]; then
     source "$CONFIG_FILE" \
       || { echo "Error: failed to load config $CONFIG_FILE" >&2; exit 1; }
 fi
-# Config validation
+
+## Defaults and validation
+: "${PARALLAX_MP_INOTIFYWAIT_CMD:=inotifywait}"
+: "${PARALLAX_MP_FUSE_OVERLAYFS_CMD:=fuse-overlayfs}"
+: "${PARALLAX_MP_SQUASHFUSE_CMD:=squashfuse}"
+
 REQUIRED_CFG_VARS=(
   PARALLAX_MP_INOTIFYWAIT_CMD
   PARALLAX_MP_FUSE_OVERLAYFS_CMD
@@ -40,36 +45,19 @@ REQUIRED_CFG_VARS=(
 # for each required config var
 for cfg in "${REQUIRED_CFG_VARS[@]}"; do
   # expand the variable from the config list
-  val="${!cfg}"
-  # check if the variable appears in the config file, so we know we sourced it already
-  if [ -n "${PARALLAX_MP_CONFIG:-}" ] || grep -q "^${cfg}=" <<<"$(<"$CONFIG_FILE" 2>/dev/null)"; then
-
-	# if the variable is empty we unset it
-    if [ -z "$val" ]; then
-      echo "Warning: $cfg is empty in $CONFIG_FILE; using default." >&2
-      unset "$cfg"
-
-	# if variable contents looks like a path, we then check if it is an executable
-    elif [[ "$val" == */* ]]; then
-      if [ ! -x "$val" ]; then
-        echo "Warning: $cfg='$val' not executable; ignoring." >&2
-        unset "$cfg"
-      fi
-
-	# finally, it could just be a command we can use from PATH
-    else
-      if ! command -v "$val" &>/dev/null; then
-        echo "Warning: $cfg='$val' not found in \$PATH; ignoring." >&2
-        unset "$cfg"
-      fi
-    fi
-
+  cmd="${!cfg}"
+  if [ -z "$cmd" ]; then
+    echo "Error: $var must be set (env or config)" >&2
+    exit 1
+  fi
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "Error: $var=\"$cmd\" not found or not executable" >&2
+    exit 1
   fi
 done
-# we use what we found during config or use the default
-INOTIFYWAIT_CMD="${PARALLAX_MP_INOTIFYWAIT_CMD:-inotifywait}"
-FUSE_OVERLAYFS_CMD="${PARALLAX_MP_FUSE_OVERLAYFS_CMD:-fuse-overlayfs}"
-SQUASHFUSE_CMD="${PARALLAX_MP_SQUASHFUSE_CMD:-squashfuse}"
+INOTIFYWAIT_CMD="${PARALLAX_MP_INOTIFYWAIT_CMD}"
+FUSE_OVERLAYFS_CMD="${PARALLAX_MP_FUSE_OVERLAYFS_CMD}"
+SQUASHFUSE_CMD="${PARALLAX_MP_SQUASHFUSE_CMD}"
 
 # List of all dependency-tools
 DEPENDENCIES=(

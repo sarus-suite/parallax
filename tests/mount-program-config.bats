@@ -75,9 +75,10 @@ EOF
 }
 
 @test "watcher unmounts on deletion of etc directory" {
-  # Skip if we don't have real fuse binaries
+  # Skip if we don't have real binaries
   command -v squashfuse >/dev/null || skip "needs squashfuse"
   command -v fuse-overlayfs >/dev/null || skip "needs fuse-overlayfs"
+  command -v inotifywait >/dev/null || skip "needs inotifywait"
 
   # Build a real squashfs image containing an /etc directory
   mkdir -p "$LOWERDIR/content/etc"
