@@ -62,7 +62,7 @@ EOF
 
   # Run mount program using config
   run env PARALLAX_MP_CONFIG="$TEST_DIR/parallax-mount.conf" \
-      "$TEST_DIR/parallax-mount-program.sh" \
+      bash -x "$TEST_DIR/parallax-mount-program.sh" \
       --lowerdir="$LOWERDIR" --upperdir="$UPPERRDIR" \
       --workdir="$WORKDIR" "$MNTPOINT"
 
@@ -90,7 +90,7 @@ EOF
   export PARALLAX_MP_FUSE_OVERLAYFS_CMD="env-fuse-overlayfs"
 
   # Run mount program
-  run "$TEST_DIR/parallax-mount-program.sh" \
+  run bash -x "$TEST_DIR/parallax-mount-program.sh" \
       --lowerdir="$LOWERDIR" --upperdir="$UPPERRDIR" \
       --workdir="$WORKDIR" "$MNTPOINT"
 
@@ -111,7 +111,7 @@ EOF
   mksquashfs "$LOWERDIR/content" "${LOWERDIR}.squash" -noappend -no-progress >/dev/null
 
   # Launch the mount program in background
-  "$TEST_DIR/parallax-mount-program.sh" \
+  bash -x "$TEST_DIR/parallax-mount-program.sh" \
     --lowerdir="$LOWERDIR" \
     --upperdir="$UPPERRDIR" \
     --workdir="$WORKDIR" \
