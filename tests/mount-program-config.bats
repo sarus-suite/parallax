@@ -122,5 +122,10 @@ EOF
       "$MNTPOINT"
 
   [ "$status" -ne 0 ]
-  [[ "$output" =~ "missing-fuse-overlayfs not found" ]] || [[ "$output" =~ "command not found" ]]
+  [[ "$output" =~ "missing-fuse-overlayfs not found" ]] || [[ "$output" =~ "command not found" ]] || {
+     echo "=== MOUNT-PROG STDOUT/ERR ==="
+     echo "$output"
+     echo "============================="
+     return 1
+   }
 }
