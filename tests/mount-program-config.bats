@@ -126,6 +126,5 @@ EOF
      echo "=== MOUNT-PROG STDOUT/ERR ==="
      echo "$output"
      echo "============================="
-     return 1
    }
 }
