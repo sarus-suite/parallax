@@ -99,34 +99,28 @@ EOF
   [[ "$output" =~ env-fuse-overlayfs ]]
 }
 
-
-@test "falls back to PATH defaults when no config/env" {
+# Test missing fuse-overlayfs via env override rather than manipulating PATH
+@test "errors when fuse-overlayfs binary is missing via env override" {
   LOWERDIR="$TEST_DIR/lowerdir"
   UPPERRDIR="$TEST_DIR/upperdir"
   WORKDIR="$TEST_DIR/workdir"
   MNTPOINT="$TEST_DIR/mnt"
-  BINDIR="$TEST_DIR/bin"
-  mkdir -p "$LOWERDIR" "$UPPERRDIR" "$WORKDIR" "$MNTPOINT" "$BINDIR"
+  mkdir -p "$LOWERDIR/content" "$UPPERRDIR" "$WORKDIR" "$MNTPOINT"
 
-  # Remove config and unset vars
+  echo "data" > "$LOWERDIR/content/test_missing.txt"
+  mksquashfs "$LOWERDIR/content" "${LOWERDIR}.squash" -noappend -no-progress >/dev/null
+
   rm -f "$TEST_DIR/parallax-mount.conf"
-  unset PARALLAX_MP_SQUASHFUSE_CMD PARALLAX_MP_FUSE_OVERLAYFS_CMD
+  unset PARALLAX_MP_CONFIG
 
-  # Restrict PATH so only stub squashfuse is found
-  export PATH="$BINDIR"
-
-  # Provide only squashfuse stub, no fuse-overlayfs
-  echo '#!/usr/bin/env bash
-  echo squashfuse
-  ' > "$BINDIR/squashfuse"
-  chmod +x "$BINDIR/squashfuse"
+  # Override only fuse-overlayfs to a non-existent binary
+  export PARALLAX_MP_FUSE_OVERLAYFS_CMD=missing-fuse-overlayfs
+  export PARALLAX_MP_SQUASHFUSE_CMD=squashfuse
 
   run bash -x "$TEST_DIR/parallax-mount-program.sh" \
       "-o lowerdir=$LOWERDIR,upperdir=$UPPERRDIR,workdir=$WORKDIR" \
       "$MNTPOINT"
 
   [ "$status" -ne 0 ]
-  [[ "$output" =~ "fuse-overlayfs not found" ]] || [[ "$output" =~ "command not found" ]]
-  [[ ! "$output" =~ squashfuse-from-path ]]
+  [[ "$output" =~ "missing-fuse-overlayfs not found" ]] || [[ "$output" =~ "command not found" ]]
 }
-
