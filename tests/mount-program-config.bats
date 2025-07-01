@@ -119,7 +119,7 @@ EOF
   echo '#!/usr/bin/env bash
   echo squashfuse
   ' > "$BINDIR/squashfuse"
-  chmod +x "$BINDIR/bin/squashfuse"
+  chmod +x "$BINDIR/squashfuse"
 
   run bash -x "$TEST_DIR/parallax-mount-program.sh" \
       "-o lowerdir=$LOWERDIR,upperdir=$UPPERRDIR,workdir=$WORKDIR" \
