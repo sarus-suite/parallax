@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Usage: --storage-opt mount_program=/path/to/parallax-mount-program.sh
 #
@@ -10,7 +10,6 @@
 
 UMOUNT_WAIT_RETRIES=${UMOUNT_WAIT_RETRIES:-"100000"}
 UMOUNT_WAIT_DELAY=${UMOUNT_WAIT_DELAY:-"30"}
-DEPENDENCIES=("inotifywait" "fuse-overlayfs" "squashfuse")
 
 # Log levels as an associative array!
 declare -A LOG_LEVELS
@@ -20,7 +19,55 @@ LOG_LEVEL="${PARALLAX_MP_LOGLEVEL:-INFO}"  # Set log level or default to INFO
 LOG_FILE="${PARALLAX_MP_LOGFILE:-/tmp/parallax-${UID}/mount_program.log}" # Set log file
 mkdir -p "$(dirname "$LOG_FILE")"
 
-# Validate input PARALLAX_vars
+###########################
+# Configuration file logic
+###########################
+DEFAULT_CONFIG="/etc/parallax-mount.conf"
+
+CONFIG_FILE="${PARALLAX_MP_CONFIG:-$DEFAULT_CONFIG}"
+## lets source the config if it is there, silent skip if file is not there
+if [ -r "$CONFIG_FILE" ]; then
+	log "INFO" "Reading config file $CONFIG_FILE"
+    source "$CONFIG_FILE" \
+      || { echo "Error: failed to load config $CONFIG_FILE" >&2; exit 1; }
+fi
+
+## Defaults and validation
+: "${PARALLAX_MP_INOTIFYWAIT_CMD:=inotifywait}"
+: "${PARALLAX_MP_FUSE_OVERLAYFS_CMD:=fuse-overlayfs}"
+: "${PARALLAX_MP_SQUASHFUSE_CMD:=squashfuse}"
+
+REQUIRED_CFG_VARS=(
+  PARALLAX_MP_INOTIFYWAIT_CMD
+  PARALLAX_MP_FUSE_OVERLAYFS_CMD
+  PARALLAX_MP_SQUASHFUSE_CMD
+)
+# for each required config var
+for cfg in "${REQUIRED_CFG_VARS[@]}"; do
+  # expand the variable from the config list
+  cmd="${!cfg}"
+  if [ -z "$cmd" ]; then
+    echo "Error: $var must be set (env or config)" >&2
+    exit 1
+  fi
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "Error: $var=\"$cmd\" not found or not executable" >&2
+    exit 1
+  fi
+done
+INOTIFYWAIT_CMD="${PARALLAX_MP_INOTIFYWAIT_CMD}"
+FUSE_OVERLAYFS_CMD="${PARALLAX_MP_FUSE_OVERLAYFS_CMD}"
+SQUASHFUSE_CMD="${PARALLAX_MP_SQUASHFUSE_CMD}"
+
+# List of all dependency-tools
+DEPENDENCIES=(
+  "$INOTIFYWAIT_CMD"
+  "$FUSE_OVERLAYFS_CMD"
+  "$SQUASHFUSE_CMD"
+)
+
+verify_dependencies
+
 ## Ensure log file directory exists or create it if possible
 mkdir -p "$(dirname "$LOG_FILE")" || { echo "Error: Failed to create log directory" >&2; exit 1; }
 ## Ensure LOG_LEVEL is valid; default to INFO
@@ -29,7 +76,6 @@ if [[ -z "${LOG_LEVELS[$LOG_LEVEL]}" ]]; then
     LOG_LEVEL="INFO"
 fi
 
-# Support functions
 
 check_log_level() {
     local msg_level="$1"
@@ -49,6 +95,7 @@ log() {
     fi
 }
 
+# Support functions
 handle_error() {
     log "ERROR" "$1"
     echo "Error: $1" >&2
@@ -64,6 +111,7 @@ verify_dependencies() {
     log "INFO" "All dependencies are available"
 }
 
+# TODO: consider logic swap, normally a return 1 means error but I did the exist with a 1
 verify_file_exists() {
     local file="$1"
     if [ ! -e "$file" ]; then
@@ -115,8 +163,9 @@ do_squash_mount() {
     local squash_file="$1"
     local target_dir="$2"
 
+	# Here we only check if link is a symlink to the actual squash file, as this is what Parallax migration does
     if [ -h "$squash_file" ]; then
-        run_and_log "Mounting squash file." squashfuse "$squash_file" "$target_dir" -o nonempty
+        run_and_log "Mounting squash file." "$SQUASHFUSE_CMD" "$squash_file" "$target_dir" -o nonempty
         if [ $? -ne 0 ]; then
             handle_error "squashfuse failed"
         fi
@@ -126,7 +175,7 @@ do_squash_mount() {
 }
 
 do_fuse_mount() {
-    run_and_log "Exec fuse-overlayfs mount" fuse-overlayfs "$@"
+    run_and_log "Exec fuse-overlayfs mount" "$FUSE_OVERLAYFS_CMD" "$@"
  #   if [ $? -ne 0 ]; then
  #       handle_error "Fuse-overlayfs mount failed"
  #   fi
@@ -158,7 +207,7 @@ run_watcher() {
 
     # Wait until container stops, FS check (inotifywait in quiet mode and event delete)
     log "INFO" "Starting inotifywait -q -e delete $mount_dir/etc"
-    output=$(inotifywait -q -e delete "$mount_dir/etc" 2>&1)
+    output=$("$INOTIFYWAIT_CMD" -q -e delete "$mount_dir/etc" 2>&1)
     exit_code=$?
 
     if [ $exit_code -eq 1 ]; then
@@ -195,7 +244,7 @@ run_and_log() {
 
 # Core logic
 main() {
-    verify_dependencies
+#    verify_dependencies
 
     # Extract lower directory and squash file
     LOWER_DIR=$(echo "$@" | sed 's/,upperdir.*//' | sed 's/.*lowerdir=//' | sed 's/.*://')
