@@ -218,7 +218,7 @@ func setupScratchStore(cfg common.Config) (storage.Store, func(), error) {
 		sublog.Debug("Failed to mount mirror: %v", err)
 		return nil, nil, err
 	}
-	sublog.Info("Mounted mirror of %q at %q", cfg.RoStoragePath, mirror)
+	sublog.Info("Mounted mirror of %s at %s", cfg.RoStoragePath, mirror)
 	originalPath := cfg.RoStoragePath
 	cfg.RoStoragePath = mirror
 
