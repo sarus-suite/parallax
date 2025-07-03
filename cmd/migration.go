@@ -35,7 +35,7 @@ func RunMigration(cfg common.Config) (*storage.Image, error) {
 	if err != nil { return nil, err }
 	defer cleanupSrcStore()
 
-	scratchStore, cleanupScratch, err := setupScratchStore(cfg)
+	scratchStore, cleanupScratch, err := setupScratchStore(&cfg)
 	if err != nil { return nil, err }
 	defer cleanupScratch()
 
