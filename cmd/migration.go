@@ -35,7 +35,7 @@ func RunMigration(cfg common.Config) (*storage.Image, error) {
 	if err != nil { return nil, err }
 	defer cleanupSrcStore()
 
-	scratchStore, cleanupScratch, err := setupScratchStore(cfg)
+	scratchStore, cleanupScratch, err := setupScratchStore(&cfg)
 	if err != nil { return nil, err }
 	defer cleanupScratch()
 
@@ -209,8 +209,18 @@ func setupSrcStore(cfg common.Config) (storage.Store, func(), error) {
 	return srcStore, cleanup, nil
 }
 
-func setupScratchStore(cfg common.Config) (storage.Store, func(), error) {
+func setupScratchStore(cfg *common.Config) (storage.Store, func(), error) {
 	sublog := log.WithField("fn", "setupScratchStore")
+
+	// we mirror the RoStoragePath to hide the fact that might be a networkedFS
+	mirror, mirrorCleanup, err := common.Mirror(cfg.RoStoragePath)
+	if err != nil {
+		sublog.Debug("Failed to mount mirror: %v", err)
+		return nil, nil, err
+	}
+	sublog.Infof("Mounted mirror of %s at %s", cfg.RoStoragePath, mirror)
+	originalPath := cfg.RoStoragePath
+	cfg.RoStoragePath = mirror
 
 	sublog.Info("Setting up scratch Store")
 	scratchRun, cleanupScratch := common.MustTempDir("scratch-runroot-*")
@@ -224,8 +234,10 @@ func setupScratchStore(cfg common.Config) (storage.Store, func(), error) {
 		return nil, nil, err
 	}
 	cleanup := func() {
+		cfg.RoStoragePath = originalPath
 		scratchStore.Shutdown(false)
 		cleanupScratch()
+		mirrorCleanup()
 	}
 	return scratchStore, cleanup, nil
 }
@@ -304,6 +316,8 @@ func putFlattenedLayer(store storage.Store, dummyDir string, digest godigest.Dig
 }
 
 func readOverlayLink(layer *storage.Layer, cfg common.Config) (string, error) {
+	sublog := log.WithField("fn", "readOverlayLink")
+	sublog.Infof("Reading overlay link from %s", cfg.RoStoragePath)
 	linkBytes, err := os.ReadFile(filepath.Join(cfg.RoStoragePath, "overlay", layer.ID, "link"))
 	if err != nil {
 		return "", fmt.Errorf("read overlay link: %w", err)
