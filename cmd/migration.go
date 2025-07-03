@@ -212,10 +212,18 @@ func setupSrcStore(cfg common.Config) (storage.Store, func(), error) {
 func setupScratchStore(cfg common.Config) (storage.Store, func(), error) {
 	sublog := log.WithField("fn", "setupScratchStore")
 
+	// we mirror the RoStoragePath to hide the fact that might be a networkedFS
+	mirror, mirrorCleanup, err := common.Mirror(cfg.RoStoragePath)
+	if err != nil {
+		sublog.Debug("Failed to mount mirror: %v", err)
+		return nil, nil, err
+	}
+	sublog.Info("Mounted mirror of %q at %q", cfg.RoStoragePath, mirror)
+
 	sublog.Info("Setting up scratch Store")
 	scratchRun, cleanupScratch := common.MustTempDir("scratch-runroot-*")
 	scratchStore, err := storage.GetStore(storage.StoreOptions{
-		GraphRoot:       cfg.RoStoragePath,
+		GraphRoot:       mirror,
 		RunRoot:         scratchRun,
 		GraphDriverName: "overlay",
 	})
@@ -226,6 +234,7 @@ func setupScratchStore(cfg common.Config) (storage.Store, func(), error) {
 	cleanup := func() {
 		scratchStore.Shutdown(false)
 		cleanupScratch()
+		mirrorCleanup()
 	}
 	return scratchStore, cleanup, nil
 }
