@@ -209,7 +209,7 @@ func setupSrcStore(cfg common.Config) (storage.Store, func(), error) {
 	return srcStore, cleanup, nil
 }
 
-func setupScratchStore(cfg common.Config) (storage.Store, func(), error) {
+func setupScratchStore(cfg *common.Config) (storage.Store, func(), error) {
 	sublog := log.WithField("fn", "setupScratchStore")
 
 	// we mirror the RoStoragePath to hide the fact that might be a networkedFS
@@ -316,6 +316,8 @@ func putFlattenedLayer(store storage.Store, dummyDir string, digest godigest.Dig
 }
 
 func readOverlayLink(layer *storage.Layer, cfg common.Config) (string, error) {
+	sublog := log.WithField("fn", "readOverlayLink")
+	sublog.Infof("Reading overlay link from %s", cfg.RoStoragePath)
 	linkBytes, err := os.ReadFile(filepath.Join(cfg.RoStoragePath, "overlay", layer.ID, "link"))
 	if err != nil {
 		return "", fmt.Errorf("read overlay link: %w", err)
