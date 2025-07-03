@@ -36,6 +36,7 @@ fuse-overlayfs
 mksquashfs (with zstd support)
 squashfuse (with zstd support)
 inotifywait
+rsync
 ~~~
 
 ### 1. Build
