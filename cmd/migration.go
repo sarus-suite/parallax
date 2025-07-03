@@ -212,13 +212,13 @@ func setupSrcStore(cfg common.Config) (storage.Store, func(), error) {
 func setupScratchStore(cfg *common.Config) (storage.Store, func(), error) {
 	sublog := log.WithField("fn", "setupScratchStore")
 
-	// we mirror the RoStoragePath to hide the fact that might be a networkedFS
+	// we copy mirror the RoStoragePath to hide the fact that might be a networkedFS
 	mirror, mirrorCleanup, err := common.Mirror(cfg.RoStoragePath)
 	if err != nil {
-		sublog.Debug("Failed to mount mirror: %v", err)
+		sublog.Debug("Failed to copy mirror: %v", err)
 		return nil, nil, err
 	}
-	sublog.Infof("Mounted mirror of %s at %s", cfg.RoStoragePath, mirror)
+	sublog.Infof("Copy mirror of %s at %s", cfg.RoStoragePath, mirror)
 	originalPath := cfg.RoStoragePath
 	cfg.RoStoragePath = mirror
 
