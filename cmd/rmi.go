@@ -27,10 +27,10 @@ func RunRmi(cfg common.Config) error {
     // we copy mirror the RoStoragePath to hide the fact that might be a networkedFS
     mirror, mirrorCleanup, err := common.Mirror(cfg.RoStoragePath)
     if err != nil {
-        sublog.Debug("Failed to copy mirror: %v", err)
-        return nil, nil, err
+        log.Debug("Failed to copy mirror: %v", err)
+        return err
     }
-    sublog.Infof("Copy mirror of %s at %s", cfg.RoStoragePath, mirror)
+    log.Infof("Copy mirror of %s at %s", cfg.RoStoragePath, mirror)
     originalPath := cfg.RoStoragePath
     cfg.RoStoragePath = mirror
 
