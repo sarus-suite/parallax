@@ -143,3 +143,6 @@ Use the provided script [`scripts/parallax-mount-program.sh`](scripts/parallax-m
 6. **Rootless only**
    Parallax has been tested only in a rootless Podman (user-namespace) setup. Running as root is untested and may require extra privileges.
 
+7. **Dynamic Linking Requirement**
+    Parallax relies on the containers/storage Go library in rootless mode, which depends on accessing the unshare system capability for user-namespace operations. This functionality is only available when the Parallax binary is dynamically linked (i.e., not statically compiled). Static binaries will produce start-up errors.
+
