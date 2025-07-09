@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"stings"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
