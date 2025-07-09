@@ -53,7 +53,7 @@ Examples:
 `)
 }
 
-func printFlag(out *io.Writer, f *flag.Flag) {
+func printFlag(out io.Writer, f *flag.Flag) {
     // double-dashed name!
     line := fmt.Sprintf("  --%s", f.Name)
 
