@@ -25,7 +25,7 @@ func main() {
 	cli, err := common.ParseAndValidateFlags(flag.CommandLine, os.Args[1:])
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		common.usage_banner()
+		flag.commandline.Usage()
 		os.Exit(2)
 	}
 
