@@ -3,8 +3,8 @@ package common
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -53,7 +53,7 @@ Examples:
 `)
 }
 
-func printFlag(out *os.File, f *flag.Flag) {
+func printFlag(out *io.Writer, f *flag.Flag) {
     // double-dashed name!
     line := fmt.Sprintf("  --%s", f.Name)
 
