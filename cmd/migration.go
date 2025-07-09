@@ -341,7 +341,7 @@ func createSquashSidecarFromMount(srcDir, link string, cfg common.Config) error 
 			"-comp", "zstd",
 			"-Xcompression-level", "1",
 			"-noD", "-no-xattrs",
-			"-e", "security.capability"
+			"-e", "security.capability", 
 		}
 		flags := defaultFlags
 		if len(cfg.MksquashfsOpts) > 0 {
