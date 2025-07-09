@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/sirupsen/logrus"
+	"github.com/mattn/go-shellwords"
 )
 
 // TODO: auto gen version field
@@ -35,6 +36,7 @@ Options:
         "podmanRoot",
         "roStoragePath",
         "mksquashfsPath",
+		"mksquashfs-opts",
         "log-level",
         "version",
     }
@@ -96,6 +98,7 @@ func ParseAndValidateFlags(fs *flag.FlagSet, args []string) (*CLI, error) {
 	podmanRoot := fs.String("podmanRoot", "/var/lib/containers/storage", "Path to Podman root storage directory")
 	roStorage  := fs.String("roStoragePath", "/mnt/nfs/podman", "Path to read-only storage location")
 	mksquashfs := fs.String("mksquashfsPath", "/usr/bin/mksquashfs", "Path to mksquashfs binary")
+	mksOptsF   := fs.String("mksquashfs-opts", "", "Parameters for mksquashfs")
 	image      := fs.String("image", "", "the name (:tag) of the image to remove")
 	logLevelF  := fs.String("log-level", "info", "Logging level (debug, info, warn, error, fatal, panic)")
 	migrateF   := fs.Bool("migrate", false, "Migrates an image")
@@ -141,6 +144,25 @@ func ParseAndValidateFlags(fs *flag.FlagSet, args []string) (*CLI, error) {
 		return nil, fmt.Errorf("Invalid log level %q", *logLevelF)
 	}
 
+	// Lets parse the mksquashfs options into a string[] and do some basic validation
+	var opts []string
+	if *mksOptsF != "" {
+		parser := shellwords.NewParser()
+		parser.ParseBacktick = true
+		parsed, err := parser.Parse(*mksOptsF)
+		if err != nil {
+			return nil, fmt.Errorf("invalid mksquashfs-opts: %w", err)
+		}
+		// Simple sanity check: ensure each starts '-'
+		for _, tok := range parsed {
+			if !strings.HasPrefix(tok, "-") {
+				return nil, fmt.Errorf("invalid mksquashfs option %q: must start with '-'", tok)
+			}
+		}
+		opts = parsed
+		fmt.Fprintf(os.Stdout, "mksquashfs opts: %v\n", opts)
+	}
+
 	// We made it through checks we can init the CLI struct
 	return &CLI {
 		Config: Config {
@@ -148,6 +170,7 @@ func ParseAndValidateFlags(fs *flag.FlagSet, args []string) (*CLI, error) {
 			RoStoragePath: *roStorage,
 			MksquashfsPath: *mksquashfs,
 			Image: *image,
+			MksquashfsOpts: opts,
 		},
 		Op: map[bool]Operation{true: OpMigrate, false: OpRmi}[*migrateF], // inlined if/else
 		LogLevel: level,
