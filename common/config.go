@@ -3,7 +3,6 @@ package common
 import (
 	"os"
 	"fmt"
-	"strings"
 )
 
 type Config struct {
