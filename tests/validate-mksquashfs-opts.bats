@@ -23,6 +23,13 @@ run \
 	ls "$RO_STORAGE"/overlay/**/*.squash
 [ "$status" -eq 0 ]
 
+# Inspect squashfs metadata
+run \
+	bash -c 'SQUASH_FILE=$(ls "$RO_STORAGE"/overlay/**/*.squash | head -n1) && unsquashfs -s "$SQUASH_FILE"'
+[ "$status" -eq 0 ]
+[[ "$output" =~ "Compression zstd" ]]
+[[ "$output" =~ "level 3" ]]
+
 run \
 	"$PODMAN_BINARY" \
 		--root "$CLEAN_ROOT" \
