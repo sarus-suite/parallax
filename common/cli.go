@@ -145,7 +145,7 @@ func ParseAndValidateFlags(fs *flag.FlagSet, args []string) (*CLI, error) {
 		return nil, fmt.Errorf("Invalid log level %q", *logLevelF)
 	}
 
-	// Lets parse the mksquashfs options into a string[] and do some basic validation
+	// Lets parse the mksquashfs options into a string[]
 	var opts []string
 	if *mksOptsF != "" {
 		parser := shellwords.NewParser()
@@ -153,12 +153,6 @@ func ParseAndValidateFlags(fs *flag.FlagSet, args []string) (*CLI, error) {
 		parsed, err := parser.Parse(*mksOptsF)
 		if err != nil {
 			return nil, fmt.Errorf("invalid mksquashfs-opts: %w", err)
-		}
-		// Simple sanity check: ensure each starts '-'
-		for _, tok := range parsed {
-			if !strings.HasPrefix(tok, "-") {
-				return nil, fmt.Errorf("invalid mksquashfs option %q: must start with '-'", tok)
-			}
 		}
 		opts = parsed
 		fmt.Fprintf(os.Stdout, "mksquashfs opts: %v\n", opts)
