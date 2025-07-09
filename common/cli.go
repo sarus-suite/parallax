@@ -3,6 +3,7 @@ package common
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/sirupsen/logrus"
@@ -12,24 +13,68 @@ import (
 const Version = "1.0.0"
 
 func usage_banner() {
-	fmt.Fprintf(flag.CommandLine.Output(), `
+    out := flag.CommandLine.Output()
+
+	// Header
+    fmt.Fprintf(out, `
 Parallax
 OCI image migration tool for Podman on HPC systems
 
 Usage:
-  parallax -migrate -image <image[:tag]> [options]
-  parallax -rmi -image <image[:tag]> [options]
+  parallax --migrate --image <image[:tag]> [options]
+  parallax --rmi     --image <image[:tag]> [options]
 
 Options:
 `)
-	flag.PrintDefaults()
-	fmt.Fprintf(flag.CommandLine.Output(), `
+
+    // New flag section
+	order := []string{
+        "migrate",
+        "rmi",
+        "image",
+        "podmanRoot",
+        "roStoragePath",
+        "mksquashfsPath",
+        "log-level",
+        "version",
+    }
+    for _, name := range order {
+        if f := flag.CommandLine.Lookup(name); f != nil {
+            printFlag(out, f)
+        }
+    }
+
+	// Footer
+    fmt.Fprintf(out, `
 Examples:
-  parallax -migrate -image ubuntu:latest
-  parallax -rmi -image alpine:3.18
+  parallax --migrate --image ubuntu:latest
+  parallax --rmi     --image alpine:3.18
 
 `)
 }
+
+func printFlag(out io.Writer, f *flag.Flag) {
+    // double-dashed name!
+    line := fmt.Sprintf("  --%s", f.Name)
+
+    // alignment
+	if len(f.Name) < 8 {
+        line += "\t"
+    } else {
+        line += "\t"
+    }
+
+    // usage text
+    line += f.Usage
+
+    // show default
+    if def := f.DefValue; def != "" && def != "false" {
+        line += fmt.Sprintf(" (default %q)", def)
+    }
+	// and print
+    fmt.Fprintln(out, line)
+}
+
 
 // Track we are being asked
 type Operation int
@@ -108,3 +153,4 @@ func ParseAndValidateFlags(fs *flag.FlagSet, args []string) (*CLI, error) {
 		LogLevel: level,
 	}, nil
 }
+
