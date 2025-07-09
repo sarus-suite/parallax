@@ -350,7 +350,7 @@ func createSquashSidecarFromMount(srcDir, link string, cfg common.Config) error 
 
 		// Build mksquashfs command
 		arg := append([]string{srcDir, squashPath}, flags...)
-		cmd := exec.Command(cfg.MksquashfsPath, args...)
+		cmd := exec.Command(cfg.MksquashfsPath, arg...)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("mksquashfs: %v\n%s", err, out)
 		}
