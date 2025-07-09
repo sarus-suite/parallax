@@ -334,11 +334,23 @@ func createSquashSidecarFromMount(srcDir, link string, cfg common.Config) error 
 		if err := os.MkdirAll(filepath.Dir(squashPath), 0o755); err != nil {
 			return err
 		}
-		// TODO: how to expose options? particularly the compression?
-		cmd := exec.Command(cfg.MksquashfsPath,
-		srcDir, squashPath,
-		"-noappend", "-comp", "zstd", "-Xcompression-level", "1", "-noD", 
-		"-no-xattrs", "-e", "security.capability")
+
+		// Choose default or user provided flags
+		defaultFlags := []string {
+			"-noappend",
+			"-comp", "zstd",
+			"-Xcompression-level", "1",
+			"-noD", "-no-xattrs",
+			"-e", "security.capability")
+		}
+		flags := defaultFlags
+		if len(cfg.MksquashfsOpts) > 0 {
+			flags = cfg.MksquashfsOpts
+		}
+
+		// Build mksquashfs command
+		arg := append([]string{srcDir, squashPath}, flags...)
+		cmd := exec.Command(cfg.MksquashfsPath, args...)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("mksquashfs: %v\n%s", err, out)
 		}

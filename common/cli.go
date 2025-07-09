@@ -154,7 +154,6 @@ func ParseAndValidateFlags(fs *flag.FlagSet, args []string) (*CLI, error) {
 			return nil, fmt.Errorf("invalid mksquashfs-opts: %w", err)
 		}
 		opts = parsed
-		fmt.Fprintf(os.Stdout, "mksquashfs opts: %v\n", opts)
 	}
 
 	// We made it through checks we can init the CLI struct
