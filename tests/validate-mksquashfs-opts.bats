@@ -20,7 +20,7 @@ run \
 [[ "$output" =~ "Migration successfully completed" ]]
 
 run \
-	bash -c "test -f \"$RO_STORAGE/squash/*.squash\""
+	ls "$RO_STORAGE"/overlay/**/*.squash
 [ "$status" -eq 0 ]
 
 run \
