@@ -47,7 +47,7 @@ run \
 		--runroot "$PODMAN_RUNROOT" \
 		--storage-opt additionalimagestore=$RO_STORAGE \
 		--storage-opt mount_program=$MOUNT_PROGRAM_PATH \
-		run --rm --security-opt seccomp=unconfined ubuntu:latest cat /etc/os-release
+		run --rm $PODMAN_RUN_OPTIONS ubuntu:latest cat /etc/os-release
 [ "$status" -eq 0 ]
 [[ "$output" =~ "ubuntu" ]]
 

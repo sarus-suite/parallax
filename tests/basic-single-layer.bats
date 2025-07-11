@@ -41,7 +41,7 @@ run \
 		--runroot "$PODMAN_RUNROOT" \
 		--storage-opt additionalimagestore=$RO_STORAGE \
 		--storage-opt mount_program=$MOUNT_PROGRAM_PATH \
-		run --rm --security-opt seccomp=unconfined busybox:latest echo ok
+		run --rm $PODMAN_RUN_OPTIONS busybox:latest echo ok
 [ "$status" -eq 0 ]
 [ "$output" = "ok" ]
 
