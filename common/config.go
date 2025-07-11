@@ -6,10 +6,11 @@ import (
 )
 
 type Config struct {
-    PodmanRoot     string
-    RoStoragePath  string
-    MksquashfsPath string
-    Image          string
+    PodmanRoot        string
+    RoStoragePath     string
+    MksquashfsPath    string
+    Image             string
+	MksquashfsOpts    []string
 }
 
 func IsDir(path string) error {
