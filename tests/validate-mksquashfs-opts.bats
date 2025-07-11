@@ -36,7 +36,7 @@ run \
 		--runroot "$PODMAN_RUNROOT" \
 		--storage-opt additionalimagestore=$RO_STORAGE \
 		--storage-opt mount_program=$MOUNT_PROGRAM_PATH \
-		run --rm --security-opt seccomp=unconfined docker.io/library/hello-world:linux
+		run --rm $PODMAN_RUN_OPTIONS docker.io/library/hello-world:linux
 [ "$status" -eq 0 ]
 [[ "$output" =~ "Hello from Docker!" ]]
 
