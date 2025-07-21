@@ -34,7 +34,7 @@ libbtrfs-dev
 device-mapper-devel
 fuse-overlayfs
 mksquashfs (with zstd support)
-squashfuse (with zstd support)
+squashfuse >= 0.5.1 (with zstd support)
 inotifywait
 rsync
 ~~~
