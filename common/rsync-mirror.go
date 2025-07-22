@@ -54,7 +54,7 @@ func Mirror(srcDir string) (mirrorDir string, cleanup func() error, err error) {
 
         cmdBack := exec.Command("rsync",
             "-a",
-            "--exclude squash/",
+            "--exclude=squash/",
             "--delete",
             mirrorPath, srcPath,
         )
