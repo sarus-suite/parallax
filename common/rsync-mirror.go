@@ -33,8 +33,13 @@ func Mirror(srcDir string) (mirrorDir string, cleanup func() error, err error) {
         return "", nil, fmt.Errorf("initial rsync failed: %v\n%s", err2, out)
     }
 
-    // Now we symlink real squash into mirror
+    // In case srcDir is not init, we might not have a squash dir, lets create it
     realSquash := filepath.Join(srcDir, "squash")
+    if err := os.MkdirAll(realSquash, 0o755); err != nil {
+        return fmt.Errorf("failed to create real squash dir %q: %w", realSquash, err)
+    }
+
+    // Now we symlink real squash into mirror
     linkName   := filepath.Join(mirrorPath, "squash")
     if err2 := os.Symlink(realSquash, linkName); err2 != nil {
         os.RemoveAll(mp)

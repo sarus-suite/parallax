@@ -331,9 +331,6 @@ func createSquashSidecarFromMount(srcDir, link string, cfg common.Config) error 
 
 	squashPath := filepath.Join(cfg.RoStoragePath, "squash", link+".squash")
 	if _, err := os.Stat(squashPath); errors.Is(err, os.ErrNotExist) {
-		if err := os.MkdirAll(filepath.Dir(squashPath), 0o755); err != nil {
-			return err
-		}
 
 		// Choose default or user provided flags
 		defaultFlags := []string {
