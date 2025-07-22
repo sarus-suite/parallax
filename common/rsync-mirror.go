@@ -22,14 +22,37 @@ func Mirror(srcDir string) (mirrorDir string, cleanup func() error, err error) {
     srcPath := filepath.Clean(srcDir) + string(os.PathSeparator)
     mirrorPath := filepath.Clean(mp) + string(os.PathSeparator)
 
-    cmd := exec.Command("rsync", "-a", srcPath, mirrorPath)
+    // Setup mirror but skip squash/ dir
+    cmd := exec.Command("rsync",
+        "-a",
+        "--exclude=squash/",
+        srcPath, mirrorPath,
+    )
     if out, err2 := cmd.CombinedOutput(); err2 != nil {
         os.RemoveAll(mp)
         return "", nil, fmt.Errorf("initial rsync failed: %v\n%s", err2, out)
     }
 
+    // Now we symlink real squash into mirror
+    realSquash := filepath.Join(srcDir, "squash")
+    linkName   := filepath.Join(mirrorPath, "squash")
+    if err2 := os.Symlink(realSquash, linkName); err2 != nil {
+        os.RemoveAll(mp)
+        return "", nil, fmt.Errorf("squash symlink failed: %w", err2)
+    }
+
+    // On cleanup we remove link then rsync back
     cleanup = func() error {
-        cmdBack := exec.Command("rsync", "-a", "--delete", mirrorPath, srcPath)
+        if err := os.Remove(filepath.Join(mirrorPath, "squash")); err != nil {
+            return fmt.Errorf("Failed to remove squash symlink: %w", err)
+        }
+
+        cmdBack := exec.Command("rsync",
+            "-a",
+            "--exclude squash/"
+            "--delete",
+            mirrorPath, srcPath,
+        )
         if out, err2 := cmdBack.CombinedOutput(); err2 != nil {
             return fmt.Errorf("rsync back failed: %v\n%s", err2, out)
         }
