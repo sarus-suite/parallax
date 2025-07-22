@@ -22,10 +22,10 @@ func Mirror(srcDir string) (mirrorDir string, cleanup func() error, err error) {
         return "", nil, fmt.Errorf("Failed to create temp dir: %w", err)
     }
 
-   log.Infof("Mirror: rsync from %s to %s (no squash/)", srcPath, mirrorPath)
 
     srcPath := filepath.Clean(srcDir) + string(os.PathSeparator)
     mirrorPath := filepath.Clean(mp) + string(os.PathSeparator)
+    log.Infof("Mirror: rsync from %s to %s (no squash/)", srcPath, mirrorPath)
 
     // Setup mirror but skip squash/ dir
     cmd := exec.Command("rsync",
@@ -38,13 +38,13 @@ func Mirror(srcDir string) (mirrorDir string, cleanup func() error, err error) {
         return "", nil, fmt.Errorf("Initial rsync failed: %v\n%s", err2, out)
     }
 
-    log.Infof("Mirror: creating squash symlink %s to %s", linkName, realSquash)
     // In case srcDir is not init, we might not have a squash dir, lets create it
     realSquash := filepath.Join(srcDir, "squash")
+    linkName   := filepath.Join(mirrorPath, "squash")
+    log.Infof("Mirror: creating squash symlink %s to %s", linkName, realSquash)
     if err := os.MkdirAll(realSquash, 0o755); err != nil {
         return "", nil, fmt.Errorf("Failed to create real squash dir %q: %w", realSquash, err)
     }
-    linkName   := filepath.Join(mirrorPath, "squash")
     if err2 := os.Symlink(realSquash, linkName); err2 != nil {
         os.RemoveAll(mp)
         return "", nil, fmt.Errorf("Squash symlink failed: %w", err2)
