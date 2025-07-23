@@ -5,6 +5,8 @@ import (
     "os"
     "os/exec"
     "path/filepath"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Mirror creates a writable mirror of srcDir in a temp directory.
@@ -13,23 +15,55 @@ import (
 //
 // Note: this requires the "rsync" binary to be installed and in PATH.
 func Mirror(srcDir string) (mirrorDir string, cleanup func() error, err error) {
+	log.Infof("Mirror: creating temp dir for %q", srcDir)
+
     mp, err := os.MkdirTemp("", "rsync-mirror-")
     if err != nil {
-        return "", nil, fmt.Errorf("failed to create temp dir: %w", err)
+        return "", nil, fmt.Errorf("Failed to create temp dir: %w", err)
     }
 
-    // Ensure the srcDir path ends with a trailing slash for rsync behavior
+
     srcPath := filepath.Clean(srcDir) + string(os.PathSeparator)
     mirrorPath := filepath.Clean(mp) + string(os.PathSeparator)
+    log.Infof("Mirror: rsync from %s to %s (no squash/)", srcPath, mirrorPath)
 
-    cmd := exec.Command("rsync", "-a", srcPath, mirrorPath)
+    // Setup mirror but skip squash/ dir
+    cmd := exec.Command("rsync",
+        "-a",
+        "--exclude=squash/",
+        srcPath, mirrorPath,
+    )
     if out, err2 := cmd.CombinedOutput(); err2 != nil {
         os.RemoveAll(mp)
-        return "", nil, fmt.Errorf("initial rsync failed: %v\n%s", err2, out)
+        return "", nil, fmt.Errorf("Initial rsync failed: %v\n%s", err2, out)
     }
 
+    // In case srcDir is not init, we might not have a squash dir, lets create it
+    realSquash := filepath.Join(srcDir, "squash")
+    linkName   := filepath.Join(mirrorPath, "squash")
+    log.Infof("Mirror: creating squash symlink %s to %s", linkName, realSquash)
+    if err := os.MkdirAll(realSquash, 0o755); err != nil {
+        return "", nil, fmt.Errorf("Failed to create real squash dir %q: %w", realSquash, err)
+    }
+    if err2 := os.Symlink(realSquash, linkName); err2 != nil {
+        os.RemoveAll(mp)
+        return "", nil, fmt.Errorf("Squash symlink failed: %w", err2)
+    }
+
+    // On cleanup we remove link then rsync back
     cleanup = func() error {
-        cmdBack := exec.Command("rsync", "-a", "--delete", mirrorPath, srcPath)
+        log.Infof("Mirror-cleanup: remove mirror’s squash symlink")
+        if err := os.Remove(filepath.Join(mirrorPath, "squash")); err != nil {
+            return fmt.Errorf("Failed to remove squash symlink: %w", err)
+        }
+
+        log.Infof("Mirror-cleanup: rsync back from %s to %s (excluding squash/)", mirrorPath, srcPath)
+        cmdBack := exec.Command("rsync",
+            "-a",
+            "--exclude=squash/",
+            "--delete",
+            mirrorPath, srcPath,
+        )
         if out, err2 := cmdBack.CombinedOutput(); err2 != nil {
             return fmt.Errorf("rsync back failed: %v\n%s", err2, out)
         }
