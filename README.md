@@ -146,3 +146,12 @@ Use the provided script [`scripts/parallax-mount-program.sh`](scripts/parallax-m
 7. **Dynamic Linking Requirement**
     Parallax relies on the containers/storage Go library in rootless mode, which depends on accessing the unshare system capability for user-namespace operations. This functionality is only available when the Parallax binary is dynamically linked (i.e., not statically compiled). Static binaries will produce start-up errors.
 
+8. **FUSE3 and fusermount3 required**
+   Parallax is built against FUSE3 and expects `fusermount3`. If you use a `fusermount` version < 3.0, you will see errors like:
+~~~
+  ERROR: Mounting squash file. failed: fuse: mountpoint is not empty
+fuse: if you are sure this is safe, use the 'nonempty' mount option
+  ERROR: squashfuse failed
+~~~
+Please upgrade to FUSE3 (and ensure `fusermount` symlinks to `fusermount3`) to avoid this issue.
+
