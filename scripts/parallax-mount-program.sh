@@ -36,6 +36,7 @@ fi
 : "${PARALLAX_MP_INOTIFYWAIT_CMD:=inotifywait}"
 : "${PARALLAX_MP_FUSE_OVERLAYFS_CMD:=fuse-overlayfs}"
 : "${PARALLAX_MP_SQUASHFUSE_CMD:=squashfuse}"
+: "${PARALLAX_MP_SQUASHFUSE_FLAG:=''}"
 
 REQUIRED_CFG_VARS=(
   PARALLAX_MP_INOTIFYWAIT_CMD
@@ -165,7 +166,7 @@ do_squash_mount() {
 
 	# Here we only check if link is a symlink to the actual squash file, as this is what Parallax migration does
     if [ -h "$squash_file" ]; then
-        run_and_log "Mounting squash file." "$SQUASHFUSE_CMD" "$squash_file" "$target_dir"
+        run_and_log "Mounting squash file." "$SQUASHFUSE_CMD" "$squash_file" "$target_dir" "$PARALLAX_MP_SQUASHFUSE_FLAG"
         if [ $? -ne 0 ]; then
             handle_error "squashfuse failed"
         fi
