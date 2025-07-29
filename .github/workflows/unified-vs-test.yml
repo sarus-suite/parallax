@@ -26,21 +26,21 @@ jobs:
       - name: Run build inside Podman container
         run: |
           podman run --rm \
-            -v "$PWD":"$PWD":Z \
-            -v "$TMP_DIR":"$TMP_DIR":Z \
-            -w "$PWD" \
-            ghcr.io/sarus-suite/parallax/ci-runner:latest \
-            bash -c "
-              set -eux
-              mkdir -p $TMP_DIR/dist
-              cd parallax
-              go version
-              VER=opensuse-\$(lsb_release -rs)
-              HOST_ARCH=\$(go env GOHOSTARCH)
-              OUT=parallax-${GITHUB_REF_NAME}-${VER}-${HOST_ARCH}
-              echo Building \$OUT
-              go get .
-              "
+          -v "$PWD":"$PWD":Z \
+                          -v "$TMP_DIR":"$TMP_DIR":Z \
+                                                  -w "$PWD" \
+                                                           ghcr.io/sarus-suite/parallax/ci-runner:latest \
+                                                           bash -c "
+                                                           set -eux
+                                                           mkdir -p $TMP_DIR/dist
+                                                           cd parallax
+                                                           go version
+                                                           VER=opensuse-\$(lsb_release -rs)
+                                                           HOST_ARCH=\$(go env GOHOSTARCH)
+                                                           OUT=parallax-${GITHUB_REF_NAME}-${VER}-${HOST_ARCH}
+                                                           echo Building \$OUT
+                                                           go get .
+                                                           "
         working-directory: ${{ env.TMP_DIR }}/parallax
 
 
@@ -62,8 +62,8 @@ jobs:
           #          echo "Building $OUT"
           #          GOARCH=$HOST_ARCH go build -v -x \
           #          -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
-                                                                                                -o dist/$OUT \
-                                                                                                .
+          -o dist/$OUT \
+          .
 
       - name: Run a script
         run: |
