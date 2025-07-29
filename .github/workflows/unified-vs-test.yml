@@ -40,6 +40,19 @@ jobs:
             OUT=parallax-${GITHUB_REF_NAME}-${VER}-${HOST_ARCH}
             echo Building \$OUT
             go get .
+            CGO_ENABLED=1 \
+              CC=gcc \
+              GOFLAGS="-buildvcs=false" \
+              GO_LDFLAGS="-linkmode external" \
+              CGO_LDFLAGS="-g -O2" \
+              CGO_CFLAGS: "-I/users/felipecr/btrfs-progs/include" \
+              GOARCH=\$HOST_ARCH \
+              GOOS=linux \
+              go build -v \
+                -ldflags \"-X 'github.com/sarus-suite/parallax/version.Version=${GITHUB_REF_NAME}'\" \
+                -o $TMP_DIR/dist/\$OUT \
+                .
+              echo Built binary: $TMP_DIR/dist/\$OUT
             "
         working-directory: ${{ env.TMP_DIR }}/parallax
 
