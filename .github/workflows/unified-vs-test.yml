@@ -2,7 +2,8 @@ name: Run on Zinal
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - 'fc-*'
 
 jobs:
   build:
