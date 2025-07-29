@@ -16,48 +16,47 @@ jobs:
         run: git clone --depth 1 --branch "${GITHUB_REF_NAME}" https://github.com/${GITHUB_REPOSITORY}.git
         working-directory: ${{ env.TMP_DIR }}
 
+      - name: Get Go 1.24
+        run: |
+          mkdir -p local-go
+          cd local-go
+          curl -LO https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
+          tar -xzf go1.24.0.linux-amd64.tar.gz
+          echo "GOROOT=$PWD/go" >> $GITHUB_ENV
+          echo "PATH=$PWD/go/bin:$PATH" >> $GITHUB_ENV
+        working-directory: ${{ env.TMP_DIR }}
 
-- name: Get Go 1.24
-  run: |
-    mkdir -p local-go
-    cd local-go
-    curl -LO https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
-    tar -xzf go1.24.0.linux-amd64.tar.gz
-    echo "GOROOT=$PWD/go" >> $GITHUB_ENV
-    echo "PATH=$PWD/go/bin:$PATH" >> $GITHUB_ENV
-  working-directory: ${{ env.TMP_DIR }}
+      - name: Check Go
+        run: |
+          go version
+        working-directory: ${{ env.TMP_DIR }}
 
-- name: Check Go
-  run: |
-    go version
-  working-directory: ${{ env.TMP_DIR }}
+      - name: Install parallax deps
+        run: go get ./..
+        working-directory: ${{ env.TMP_DIR }}
 
-- name: Install parallax deps
-  run: go get ./..
-  working-directory: ${{ env.TMP_DIR }}
+      - name: Build parallax
+        env:
+          CGO_ENABLED: "1"
+          CC: gcc
+          GOOS: linux
+          GOFLAGS: "-buildvcs=false"
+          GO_LDFLAGS: "-linkmode external"
+          CGO_LDFLAGS: "-g -O2"
+        run: |
+          VER="opensuse-$(lsb_release -rs)"
+          mkdir -p dist
+          HOST_ARCH=$(go env GOHOSTARCH)
+          OUT="parallax-${{ github.ref_name }}-${VER}-${HOST_ARCH}"
+          echo "Building $OUT"
+          GOARCH=$HOST_ARCH go build -v -x \
+          -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
+                                                                                                -o dist/$OUT \
+                                                                                                .
+        working-directory: ${{ env.TMP_DIR }}
 
-- name: Build parallax
-  env:
-    CGO_ENABLED: "1"
-    CC: gcc
-    GOOS: linux
-    GOFLAGS: "-buildvcs=false"
-    GO_LDFLAGS: "-linkmode external"
-    CGO_LDFLAGS: "-g -O2"
-  run: |
-    VER="opensuse-$(lsb_release -rs)"
-    mkdir -p dist
-    HOST_ARCH=$(go env GOHOSTARCH)
-    OUT="parallax-${{ github.ref_name }}-${VER}-${HOST_ARCH}"
-    echo "Building $OUT"
-    GOARCH=$HOST_ARCH go build -v -x \
-    -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
-                                                                                          -o dist/$OUT \
-                                                                                          .
-  working-directory: ${{ env.TMP_DIR }}
-
-- name: Run a script
-  run: |
-    echo "Hello from zinal runner!"
-    uname -a
+      - name: Run a script
+        run: |
+          echo "Hello from zinal runner!"
+          uname -a
 
