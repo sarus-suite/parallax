@@ -79,6 +79,7 @@ jobs:
           export PODMAN_BINARY=$(which podman)
           export PARALLAX_BINARY=$TMP_DIR/dist/parallax
           export MOUNT_PROGRAM_PATH=$TMP_DIR/parallax/scripts/parallax-mount-program.sh
+          export PARALLAX_MP_SQUASHFUSE_FLAG="-o nonempty"
           export PODMAN_ROOT="$(mktemp -d)"
           export PODMAN_RUNROOT="$(mktemp -d)"
           export RO_STORAGE="$(mktemp -d)"
