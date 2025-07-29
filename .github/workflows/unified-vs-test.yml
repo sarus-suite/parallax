@@ -50,6 +50,7 @@ jobs:
           GOFLAGS: "-buildvcs=false"
           GO_LDFLAGS: "-linkmode external"
           CGO_LDFLAGS: "-g -O2"
+          CGO_CFLAGS: "-I/users/felipecr/btrfs-progs/include"
         run: |
           VER="opensuse-$(lsb_release -rs)"
           mkdir -p dist
