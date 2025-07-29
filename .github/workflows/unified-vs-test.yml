@@ -73,6 +73,59 @@ jobs:
           $PARALLAX_BINARY --version
         working-directory: ${{ env.TMP_DIR}}
 
+      - name: Simple parallax test
+        run: |
+          # Setup env
+          export PODMAN_BINARY=$(which podman)
+          export PARALLAX_BINARY=$TMP_DIR/dist/parallax
+          export MOUNT_PROGRAM_PATH=$TMP_DIR/parallax/scripts/parallax-mount-program.sh
+          export PODMAN_ROOT="$(mktemp -d)"
+          export PODMAN_RUNROOT="$(mktemp -d)"
+          export RO_STORAGE="$(mktemp -d)"
+          export CLEAN_ROOT="$(mktemp -d)"
+          export MKSQUASHFS_PATH="$(command -v mksquashfs)"
+
+          # Test podman + parallax
+          "$PODMAN_BINARY" \
+            --root "$PODMAN_ROOT" \
+            --runroot "$PODMAN_RUNROOT" \
+            pull busybox:latest
+
+          "$PARALLAX_BINARY" \
+            --podmanRoot "$PODMAN_ROOT" \
+            --roStoragePath "$RO_STORAGE" \
+            --mksquashfsPath "$MKSQUASHFS_PATH" \
+            --log-level info \
+            --migrate \
+            --image busybox:latest
+
+          "$PODMAN_BINARY" \
+            --root "$CLEAN_ROOT" \
+            --runroot "$PODMAN_RUNROOT" \
+            --storage-opt additionalimagestore=$RO_STORAGE \
+            --storage-opt mount_program=$MOUNT_PROGRAM_PATH \
+            images
+
+          "$PODMAN_BINARY" \
+            --root "$CLEAN_ROOT" \
+            --runroot "$PODMAN_RUNROOT" \
+            --storage-opt additionalimagestore=$RO_STORAGE \
+            --storage-opt mount_program=$MOUNT_PROGRAM_PATH \
+            run --rm $PODMAN_RUN_OPTIONS busybox:latest echo ok
+
+          # clean up
+          "$PODMAN_BINARY" \
+            --root "$PODMAN_ROOT" \
+            --runroot "$PODMAN_RUNROOT" \
+            --storage-opt mount_program=$MOUNT_PROGRAM_PATH \
+            rmi --all
+
+          rm -rf "$PODMAN_ROOT"
+          rm -rf "$PODMAN_RUNROOT"
+          rm -rf "$RO_STORAGE"
+          rm -rf "$CLEAN_ROOT"
+        working-directory: ${{ env.TMP_DIR}}
+
           #      - name: Run Bats tests
           #        run: |
           #          export PODMAN_BINARY=$(which podman)
