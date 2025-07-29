@@ -10,14 +10,11 @@ jobs:
     runs-on: zinal
     steps:
       - name: Setup temporary dir
-        id: tempdir
-        run: |
-          echo "TMP_DIR=$(mktemp -d)" >> $GITHUB_ENV
+        run: echo "TMP_DIR=$(mktemp -d)" >> $GITHUB_ENV
 
-- name: Manually clone repo within tmp dir
-  run: |
-    git clone --depth 1 --branch "${GITHUB_REF_NAME}" https://github.com/${GITHUB_REPOSITORY}.git
-  working-directory: ${{ env.TMP_DIR }}
+      - name: Manually clone repo within tmp dir
+        run: git clone --depth 1 --branch "${GITHUB_REF_NAME}" https://github.com/${GITHUB_REPOSITORY}.git
+        working-directory: ${{ env.TMP_DIR }}
 
 
 - name: Get Go 1.24
@@ -48,15 +45,15 @@ jobs:
     GO_LDFLAGS: "-linkmode external"
     CGO_LDFLAGS: "-g -O2"
   run: |
-      VER="opensuse-$(lsb_release -rs)"
-      mkdir -p dist
-      HOST_ARCH=$(go env GOHOSTARCH)
-      OUT="parallax-${{ github.ref_name }}-${VER}-${HOST_ARCH}"
-      echo "Building $OUT"
-      GOARCH=$HOST_ARCH go build -v -x \
-      -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
-                                                                                            -o dist/$OUT \
-                                                                                            .
+    VER="opensuse-$(lsb_release -rs)"
+    mkdir -p dist
+    HOST_ARCH=$(go env GOHOSTARCH)
+    OUT="parallax-${{ github.ref_name }}-${VER}-${HOST_ARCH}"
+    echo "Building $OUT"
+    GOARCH=$HOST_ARCH go build -v -x \
+    -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
+                                                                                          -o dist/$OUT \
+                                                                                          .
   working-directory: ${{ env.TMP_DIR }}
 
 - name: Run a script
