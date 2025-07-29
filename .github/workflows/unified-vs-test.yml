@@ -12,17 +12,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup temporary dir
+        id: tempdir
+        run: |
+          echo "TMP_DIR=$(mktemp -d)" >> $GITHUB_ENV
+
       - name: Get Go 1.24
         run: |
+          cd "$TMP_DIR"
           mkdir -p local-go
           cd local-go
           curl -LO https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
           tar -xzf go1.24.0.linux-amd64.tar.gz
-          echo "GOROOT=$HOME/local-go/go" >> $GITHUB_ENV
-          echo "PATH=$HOME/local-go/go/bin:$PATH" >> $GITHUB_ENV
+          echo "GOROOT=$PWD/go" >> $GITHUB_ENV
+          echo "PATH=$PWD/go/bin:$PATH" >> $GITHUB_ENV
 
       - name: Check Go
-        run: go version
+        run: |
+          cd "$TMP_DIR"
+          go version
 
       - name: Run a script
         run: |
