@@ -10,7 +10,10 @@ jobs:
     runs-on: zinal
     steps:
       - name: Setup temporary dir
-        run: echo "TMP_DIR=$(mktemp -d)" >> $GITHUB_ENV
+        run: |
+          TMP_DIR=$(mktemp -d)
+          echo "TMP_DIR=$TMP_DIR" >> $GITHUB_ENV
+          echo "Using temp directory: $TMP_DIR" 
 
       - name: Manually clone repo within tmp dir
         run: git clone --depth 1 --branch "${GITHUB_REF_NAME}" https://github.com/${GITHUB_REPOSITORY}.git
@@ -29,6 +32,10 @@ jobs:
       - name: Check Go
         run: |
           go version
+        working-directory: ${{ env.TMP_DIR }}
+
+      - name: List contents of TMP_DIR
+        run: ls -la
         working-directory: ${{ env.TMP_DIR }}
 
       - name: Install parallax deps
