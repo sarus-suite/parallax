@@ -29,6 +29,8 @@ jobs:
           -v "$PWD":"$PWD":Z \
           -v "$TMP_DIR":"$TMP_DIR":Z \
           -w "$PWD" \
+          --env TMP_DIR="$TMP_DIR" \
+          --env GITHUB_REF_NAME="$GITHUB_REF_NAME" \
           ghcr.io/sarus-suite/parallax/ci-runner:latest \
           bash -euxc '
             mkdir -p $TMP_DIR/dist
