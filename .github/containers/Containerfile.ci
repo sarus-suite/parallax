@@ -35,5 +35,5 @@ RUN set -eux; \
 ENV PATH=$PATH:/usr/local/go/bin
 
 # Default entrypoint
-ENTRYPOINT ["bash"]
+CMD ["bash"]
 
