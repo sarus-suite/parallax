@@ -30,29 +30,35 @@ jobs:
           -v "$TMP_DIR":"$TMP_DIR":Z \
           -w "$PWD" \
           ghcr.io/sarus-suite/parallax/ci-runner:latest \
-          bash -c "
-            set -eux
+          bash -euxc '
             mkdir -p $TMP_DIR/dist
-            ls
+
             go version
+
             VER=opensuse-15.5
-            HOST_ARCH=\$(go env GOHOSTARCH)
-            OUT=parallax-${GITHUB_REF_NAME}-${VER}-${HOST_ARCH}
+            HOST_ARCH="$(go env GOHOSTARCH)"
+            OUT="parallax-${GITHUB_REF_NAME}-${VER}-${HOST_ARCH}"
+
             echo Building \$OUT
+
             go get .
-            CGO_ENABLED=1 \
-              CC=gcc \
-              GOFLAGS="-buildvcs=false" \
-              GO_LDFLAGS="-linkmode external" \
-              CGO_LDFLAGS="-g -O2" \
-              GOARCH=\$HOST_ARCH \
-              GOOS=linux \
+        
+            # Build
+        echo "==> Starting go build..."
+        export CGO_ENABLED=1
+        export CC=gcc
+        export GOFLAGS="-buildvcs=false"
+        export GO_LDFLAGS="-linkmode external"
+        export CGO_LDFLAGS="-g -O2"
+        export CGO_CFLAGS="-I/users/felipecr/btrfs-progs/include"
+        export GOARCH="$HOST_ARCH"
+        export GOOS=linux
+
               go build -v \
-                -ldflags \"-X 'github.com/sarus-suite/parallax/version.Version=${GITHUB_REF_NAME}'\" \
                 -o $TMP_DIR/dist/\$OUT \
                 .
               echo Built binary: $TMP_DIR/dist/\$OUT
-            "
+            '
         working-directory: ${{ env.TMP_DIR }}/parallax
 
 
