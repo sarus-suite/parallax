@@ -115,6 +115,8 @@ jobs:
             run --rm $PODMAN_RUN_OPTIONS busybox:latest echo ok
 
           # clean up
+          sleep 4
+
           "$PODMAN_BINARY" \
             --root "$PODMAN_ROOT" \
             --runroot "$PODMAN_RUNROOT" \
@@ -123,8 +125,8 @@ jobs:
 
           rm -rf "$PODMAN_ROOT"
           rm -rf "$PODMAN_RUNROOT"
-          rm -rf "$RO_STORAGE"
           rm -rf "$CLEAN_ROOT"
+          rm -rf "$RO_STORAGE"
         working-directory: ${{ env.TMP_DIR}}
 
           #      - name: Run Bats tests
