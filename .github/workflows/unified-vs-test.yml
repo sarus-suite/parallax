@@ -62,8 +62,8 @@ jobs:
           #          echo "Building $OUT"
           #          GOARCH=$HOST_ARCH go build -v -x \
           #          -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
-          -o dist/$OUT \
-          .
+          #          -o dist/$OUT \
+          #          .
 
       - name: Run a script
         run: |
