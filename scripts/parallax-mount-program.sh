@@ -36,7 +36,8 @@ fi
 : "${PARALLAX_MP_INOTIFYWAIT_CMD:=inotifywait}"
 : "${PARALLAX_MP_FUSE_OVERLAYFS_CMD:=fuse-overlayfs}"
 : "${PARALLAX_MP_SQUASHFUSE_CMD:=squashfuse}"
-: "${PARALLAX_MP_SQUASHFUSE_FLAG:=''}"
+# ignore squashfuse flag if not set
+#: "${PARALLAX_MP_SQUASHFUSE_FLAG:=''}"
 
 REQUIRED_CFG_VARS=(
   PARALLAX_MP_INOTIFYWAIT_CMD
