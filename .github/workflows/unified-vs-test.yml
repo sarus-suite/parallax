@@ -34,7 +34,6 @@ jobs:
             set -eux
             mkdir -p $TMP_DIR/dist
             ls
-            cd parallax
             go version
             VER=opensuse-\$(lsb_release -rs)
             HOST_ARCH=\$(go env GOHOSTARCH)
