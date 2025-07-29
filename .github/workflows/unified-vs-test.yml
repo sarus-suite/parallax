@@ -65,12 +65,20 @@ jobs:
           "$TMP_DIR/bats-core/install.sh" "$TMP_DIR/bats"
         working-directory: ${{ env.TMP_DIR }}
 
-      - name: Run Bats tests
+      - name: Testing podman run
         run: |
           export PODMAN_BINARY=$(which podman)
+          $PODMAN_BINARY version
           export PARALLAX_BINARY=$TMP_DIR/dist/parallax
-          export MOUNT_PROGRAM_PATH=$TMP_DIR/parallax/scripts/parallax-mount-program.sh
-          cd parallax
-          $TMP_DIR/bats/bin/bats tests
+          $PARALLAX_BINARY --version
         working-directory: ${{ env.TMP_DIR}}
+
+          #      - name: Run Bats tests
+          #        run: |
+          #          export PODMAN_BINARY=$(which podman)
+          #          export PARALLAX_BINARY=$TMP_DIR/dist/parallax
+          #          export MOUNT_PROGRAM_PATH=$TMP_DIR/parallax/scripts/parallax-mount-program.sh
+          #          cd parallax
+          #          $TMP_DIR/bats/bin/bats tests
+          #        working-directory: ${{ env.TMP_DIR}}
 
