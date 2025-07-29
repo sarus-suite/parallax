@@ -39,8 +39,8 @@ jobs:
         working-directory: ${{ env.TMP_DIR }}
 
       - name: Install parallax deps
-        run: go get ./..
-        working-directory: ${{ env.TMP_DIR }}
+        run: go get .
+        working-directory: ${{ env.TMP_DIR }}/parallax
 
       - name: Build parallax
         env:
@@ -60,7 +60,7 @@ jobs:
           -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
                                                                                                 -o dist/$OUT \
                                                                                                 .
-        working-directory: ${{ env.TMP_DIR }}
+        working-directory: ${{ env.TMP_DIR }}/parallax
 
       - name: Run a script
         run: |
