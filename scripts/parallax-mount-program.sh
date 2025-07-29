@@ -164,9 +164,15 @@ do_squash_mount() {
     local squash_file="$1"
     local target_dir="$2"
 
+	if [[ -n "$PARALLAX_MP_SQUASHFUSE_FLAG" ]]; then
+		IFS=' ' read -r -a PARALLAX_MP_SQUASHFUSE_FLAG_ARR <<< "$PARALLAX_MP_SQUASHFUSE_FLAG"
+	else
+		PARALLAX_MP_SQUASHFUSE_FLAG_ARR=()
+	fi
+
 	# Here we only check if link is a symlink to the actual squash file, as this is what Parallax migration does
-    if [ -h "$squash_file" ]; then
-        run_and_log "Mounting squash file." "$SQUASHFUSE_CMD" "$squash_file" "$target_dir" "$PARALLAX_MP_SQUASHFUSE_FLAG"
+	if [ -h "$squash_file" ]; then
+        run_and_log "Mounting squash file." "$SQUASHFUSE_CMD" "$squash_file" "$target_dir" ${PARALLAX_MP_SQUASHFUSE_FLAG_ARR[@]}
         if [ $? -ne 0 ]; then
             handle_error "squashfuse failed"
         fi
