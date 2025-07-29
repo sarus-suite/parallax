@@ -4,8 +4,8 @@
 
 export PODMAN_BINARY="${PODMAN_BINARY:-/mnt/nfs/git/podman/bin/podman}"
 export PARALLAX_BINARY="${PARALLAX_BINARY:-/mnt/nfs/git/parallax/parallax}"
-export MOUNT_PROGRAM_PATH="/mnt/nfs/git/parallax/scripts/parallax-mount-program.sh"
-export PODMAN_RUN_OPTIONS="--security-opt seccomp=unconfined"
+export MOUNT_PROGRAM_PATH="${MOUNT_PROGRAM_PATH:-/mnt/nfs/git/parallax/scripts/parallax-mount-program.sh}"
+export PODMAN_RUN_OPTIONS="${PODMAN_RUN_OPTIONS:---security-opt seccomp=unconfined}"
 
 setup() {
   # Seting up temp dirs and env vars
