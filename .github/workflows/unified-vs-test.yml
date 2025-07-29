@@ -35,7 +35,7 @@ jobs:
             mkdir -p $TMP_DIR/dist
             ls
             go version
-            VER=opensuse-\$(lsb_release -rs)
+            VER=opensuse-15.5
             HOST_ARCH=\$(go env GOHOSTARCH)
             OUT=parallax-${GITHUB_REF_NAME}-${VER}-${HOST_ARCH}
             echo Building \$OUT
