@@ -39,7 +39,8 @@ jobs:
 
             export VER=opensuse-15.5
             export HOST_ARCH="$(go env GOHOSTARCH)"
-            export OUT="parallax-${GITHUB_REF_NAME}-${VER}-${HOST_ARCH}"
+            #export OUT="parallax-${GITHUB_REF_NAME}-${VER}-${HOST_ARCH}"
+            export OUT="parallax"
 
             go get .
         
@@ -48,7 +49,6 @@ jobs:
             export GOFLAGS="-buildvcs=false"
             export GO_LDFLAGS="-linkmode external"
             export CGO_LDFLAGS="-g -O2"
-            export CGO_CFLAGS="-I/users/felipecr/btrfs-progs/include"
             export GOARCH="$HOST_ARCH"
             export GOOS=linux
 
@@ -59,30 +59,18 @@ jobs:
            '
         working-directory: ${{ env.TMP_DIR }}/parallax
 
-
-
-          #      - name: Build parallax
-          #        env:
-          #          CGO_ENABLED: "1"
-          #          CC: gcc
-          #          GOOS: linux
-          #          GOFLAGS: "-buildvcs=false"
-          #          GO_LDFLAGS: "-linkmode external"
-          #          CGO_LDFLAGS: "-g -O2"
-          #          CGO_CFLAGS: "-I/users/felipecr/btrfs-progs/include"
-          #        run: |
-          #          VER="opensuse-$(lsb_release -rs)"
-          #          mkdir -p dist
-          #          HOST_ARCH=$(go env GOHOSTARCH)
-          #          OUT="parallax-${{ github.ref_name }}-${VER}-${HOST_ARCH}"
-          #          echo "Building $OUT"
-          #          GOARCH=$HOST_ARCH go build -v -x \
-          #          -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
-          #          -o dist/$OUT \
-          #          .
-
-      - name: Run a script
+      - name: Install Bats locally
         run: |
-          echo "Hello from zinal runner!"
-          uname -a
+          git clone --depth 1 https://github.com/bats-core/bats-core.git "$TMP_DIR/bats-core"
+          "$TMP_DIR/bats-core/install.sh" "$TMP_DIR/bats"
+        working-directory: ${{ env.TMP_DIR }}
+
+      - name: Run Bats tests
+        run: |
+          PODMAN_BINARY=$(which podman)
+          PARALLAX_BINARY=$TMP_DIR/dist/parallax
+          MOUNT_PROGRAM_PATH=$TMP_DIR/parallax/scripts/parallax-mount-program.sh
+          cd parallax
+          $TMP_DIR/bats/bin/bats tests
+        working-directory: ${{ env.TMP_DIR}}
 
