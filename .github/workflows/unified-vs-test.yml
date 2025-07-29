@@ -14,12 +14,12 @@ jobs:
 
       - name: Get Go 1.24
         run: |
-        mkdir -p local-go
-        cd local-go
-        curl -LO https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
-        tar -xzf go1.24.0.linux-amd64.tar.gz
-        echo "GOROOT=$HOME/local-go/go" >> $GITHUB_ENV
-        echo "PATH=$HOME/local-go/go/bin:$PATH" >> $GITHUB_ENV
+          mkdir -p local-go
+          cd local-go
+          curl -LO https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
+          tar -xzf go1.24.0.linux-amd64.tar.gz
+          echo "GOROOT=$HOME/local-go/go" >> $GITHUB_ENV
+          echo "PATH=$HOME/local-go/go/bin:$PATH" >> $GITHUB_ENV
 
       - name: Check Go
         run: go version
