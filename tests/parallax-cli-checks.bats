@@ -45,3 +45,21 @@ load helpers.bash
 	[[ "$output" =~ "flag provided but not defined" ]]
 }
 
+@test "Fails migration when --roStoragePath directory is non-empty" {
+  # Populate the storage dir with a dummy file
+  # This way the directory is neither empty or with a store structure
+  touch "$RO_STORAGE/dummy-file"
+
+  run "$PARALLAX_BINARY" \
+    --podmanRoot    "$PODMAN_ROOT" \
+    --roStoragePath "$RO_STORAGE" \
+    --mksquashfsPath "$MKSQUASHFS_PATH" \
+    --log-level     info \
+    --migrate \
+    --image         ubuntu:latest
+
+  # Expect a non-zero exit code and a validation error
+  [ "$status" -ne 0 ]
+  [[ "$output" =~ "Storage validation failed" ]]
+}
+
