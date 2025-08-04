@@ -1,22 +1,21 @@
 # parallax
 
-*parallax* turbocharges Podman on HPC systems by providing an efficient and read-only container image storage for parallel filesystems. With parallax, users can migrate images, leverage SquashFS, and manage distributed storage.
+*parallax* turbocharges Rootless Podman on HPC systems by providing an efficient and read-only container image storage for parallel filesystems. With parallax, users can migrate images, leverage SquashFS, and manage distributed storage.
 *parallax* is a Go utility that directly uses the container storage libraries to ensure compatibility with Podman.
 
 ## Why parallax?
-* Faster and lighter containers. It uses SquashFS images that boosts start times and runtimes.
-* Shared storage ready. Run Podman with container image store located in parallel filesystems.
-* Enhances Podman's overlay driver. No changes to your workflows are needed.
-* Pull-once, run-everywhere. Using Podman in a cluster does not require pulling iamges on every node, instead run directly from shared FS.
+* Pull-once, run-everywhere. Run Podman with a container image store located in parallel filesystems, avoiding redundant image pulls across cluster nodes.
+* Faster and lighter containers. It uses SquashFS images that boosts start times and runtimes, reducing IO contention with Read-Only shared storage.
+* Maintain compatibility with existing workflows. No changes to Podman itself.
 
 ## How it works?
-Parallax leverages existing container libraries for image handling, and a lightweight Bash wrapper to integrate SquashFS into Podman’s overlay driver—no C code or recompilation of Podman required.
+Parallax leverages existing container libraries for image handling, and a lightweight mount program to integrate SquashFS into Podman’s overlay driver—no C code or recompilation of Podman required.
 
 * Migrate your container image to a shared, read-only store (parallax --migrate):
     * Pull & mount source image.
     * Flatten into a dummy layer + generate SquashFS side-car.
     * Record layer link in the read-only store.
-* Integrates with Podman overlay storage driver via our custom mount\_program script that provides overlay + SquashFS support.
+* Integrates with Podman overlay storage driver via a custom mount program that provides overlay + SquashFS support.
     * Enables HPC containers via Podman
     * Use with Podman --storage-opt additionalimagestore=… --storage-opt mount\_program=…/parallax-mount-program.sh.
     * Podman’s overlay driver invokes Parallax mount program instead of the overlay driver default.
