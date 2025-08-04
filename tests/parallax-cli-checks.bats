@@ -73,8 +73,8 @@ load helpers.bash
     --roStoragePath "$RO_STORAGE" \
     --mksquashfsPath "$MKSQUASHFS_PATH" \
     --log-level info \
-    --migrate \
-    --rmi ubuntu:latest
+    --rmi \
+    --image ubuntu:latest
 
   # Expect a non-zero exit code and a validation error
   [ "$status" -ne 0 ]
