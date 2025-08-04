@@ -87,14 +87,20 @@ load helpers.bash
     pull alpine:latest
   [ "$status" -eq 0 ]
 
-  # Now migration should pass
+  run "$PODMAN_BINARY" \
+    --root "$PODMAN_ROOT" \
+    --runroot "$PODMAN_RUNROOT" \
+    pull ubuntu:latest
+  [ "$status" -eq 0 ]
+
+  # Now migration should pass check, and also complete a ubuntu migration
   run "$PARALLAX_BINARY" \
     --podmanRoot "$PODMAN_ROOT" \
     --roStoragePath "$RO_STORAGE" \
     --mksquashfsPath "$MKSQUASHFS_PATH" \
     --log-level info \
     --migrate \
-    --image alpine:latest
+    --image ubuntu:latest
 
   [ "$status" -eq 0 ]
   [[ "$output" =~ "Migration successfully completed" ]]
