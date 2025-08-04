@@ -38,7 +38,7 @@ func main() {
 
 	switch cli.Op {
 		case common.OpMigrate:
-			if err := common.validateRoStore(cli.Config.RoStoragePath); err != nil {
+			if err := common.ValidateRoStore(cli.Config.RoStoragePath); err != nil {
 				logrus.Fatalf("Storage validation failed before migration: %v", err)
 			}
 			_, err := cmd.RunMigration(cli.Config)
@@ -46,7 +46,7 @@ func main() {
 				logrus.Fatalf("Migration failed for image '%s': %v", cli.Config.Image, err)
 			}
 		case common.OpRmi:
-			if err := common.validateRoStore(cli.Config.RoStoragePath); err != nil {
+			if err := common.ValidateRoStore(cli.Config.RoStoragePath); err != nil {
 				logrus.Fatalf("Storage validation failed before rmi: %v", err)
 			}
 			err = cmd.RunRmi(cli.Config)

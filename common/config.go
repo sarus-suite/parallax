@@ -39,7 +39,7 @@ func IsExecutable(path string) error {
 	return nil
 }
 
-func validateRoStore(path string) error {
+func ValidateRoStore(path string) error {
 	fileInfo, err := os.Stat(path)
 	if err != nil || !fileInfo.IsDir() {
 		return fmt.Errorf("'%s' is not a valid directory", path)
