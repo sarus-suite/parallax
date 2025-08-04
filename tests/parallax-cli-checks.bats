@@ -63,6 +63,43 @@ load helpers.bash
   [[ "$output" =~ "Storage validation failed" ]]
 }
 
+@test "Advanced --roStoragePath directory is initialized" {
+  # Populate the storage dir with a dummy file
+  # This way the directory is neither empty or with a store structure
+  touch "$RO_STORAGE/dummy-file"
+
+  run "$PARALLAX_BINARY" \
+    --podmanRoot "$PODMAN_ROOT" \
+    --roStoragePath "$RO_STORAGE" \
+    --mksquashfsPath "$MKSQUASHFS_PATH" \
+    --log-level info \
+    --migrate \
+    --image alpine:latest
+
+  # Expect a non-zero exit code and a validation error
+  [ "$status" -ne 0 ]
+  [[ "$output" =~ "Storage validation failed" ]]
+
+  # Bootstrap RO_STORAGE with a pulled image, this satisfies the dir structure validation
+  run "$PODMAN_BINARY" \
+    --root "$RO_STORAGE" \
+    --runroot "$PODMAN_RUNROOT" \
+    pull alpine:latest
+  [ "$status" -eq 0 ]
+
+  # Now migration should pass
+  run "$PARALLAX_BINARY" \
+    --podmanRoot "$PODMAN_ROOT" \
+    --roStoragePath "$RO_STORAGE" \
+    --mksquashfsPath "$MKSQUASHFS_PATH" \
+    --log-level info \
+    --migrate \
+    --image alpine:latest
+
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "Migration successfully completed" ]]
+}
+
 @test "Fails RMI when --roStoragePath directory is non-empty" {
   # Populate the storage dir with a dummy file
   # This way the directory is neither empty or with a store structure
