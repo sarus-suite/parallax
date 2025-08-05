@@ -42,12 +42,12 @@ func Mirror(srcDir string) (mirrorDir string, cleanup func() error, err error) {
         includePatterns = append(includePatterns, fmt.Sprintf("--include=%s", pattern))
     }
 
-	rsyncArgs := append([]string{"rsync"}, includePatterns...)
-    rsyncArgs = append(rsyncArgs, "-a", "--exclude=*", "--delete")
+	rsyncArgs := append([]string{"--exclude=*"}, includePatterns...)
+    rsyncArgs = append(rsyncArgs, "-a", "--delete")
 
     log.Infof("Mirror setup: rsync from %s to %s", srcPath, mirrorPath)
     rsyncCmd := append(rsyncArgs, srcPath, mirrorPath)
-    cmd := exec.Command(rsyncCmd...)
+    cmd := exec.Command("rsync", rsyncCmd...)
 
     if out, err2 := cmd.CombinedOutput(); err2 != nil {
         os.RemoveAll(mp)
@@ -75,7 +75,7 @@ func Mirror(srcDir string) (mirrorDir string, cleanup func() error, err error) {
 
         log.Infof("Mirror-cleanup: rsync back from %s to %s", mirrorPath, srcPath)
         rsyncCmd = append(rsyncArgs, mirrorPath, srcPath)
-        cmdBack := exec.Command(rsyncCmd...)
+        cmdBack := exec.Command("rsync", rsyncCmd...)
 
         if out, err2 := cmdBack.CombinedOutput(); err2 != nil {
             return fmt.Errorf("rsync back failed: %v\n%s", err2, out)
