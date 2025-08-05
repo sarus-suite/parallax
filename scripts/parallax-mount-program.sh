@@ -177,19 +177,21 @@ do_squash_mount() {
         output=$("$SQUASHFUSE_CMD" "$squash_file" "$target_dir" "${PARALLAX_MP_SQUASHFUSE_FLAG_ARR[@]}" 2>&1)
         exit_code=$?
 
-        if [ $exit_code -eq 0]; then
+        if [ $exit_code -eq 0 ]; then
             log "INFO" "Mounting squash file successful"
         else
             log "WARNING" "Mounting squash file failed: $output"
 
-            if echo "$output" | grep -q "fuse: mountpoint is not empty"; then
+            if echo "$output" | grep -q "mountpoint is not empty"; then
                 log "WARNING" "Retry squashfuse with -o nonempty"
                 run_and_log "Mounting squash file." "$SQUASHFUSE_CMD" "$squash_file" "$target_dir" -o nonempty
 
                 if [ $? -ne 0 ]; then
                     handle_error "squashfuse failed after retry"
                 fi
-            fi
+			else
+				handle_error "squashfuse failed WITHOUT retry"
+			fi
         fi
     else
         log "INFO" "No squash file detected, skipping squash mount"
