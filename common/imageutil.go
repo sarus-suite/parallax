@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/containers/image/v5/pkg/shortnames"
-	"github.com/containers/image/v5/pkg/sysregistriesv2"
 	"github.com/containers/storage"
 )
 
