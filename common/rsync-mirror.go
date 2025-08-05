@@ -42,8 +42,8 @@ func Mirror(srcDir string) (mirrorDir string, cleanup func() error, err error) {
         includePatterns = append(includePatterns, fmt.Sprintf("--include=%s", pattern))
     }
 
-	rsyncArgs := append([]string{"--exclude=*"}, includePatterns...)
-    rsyncArgs = append(rsyncArgs, "-a", "--delete")
+	rsyncArgs := append([]string{"-a"}, includePatterns...)
+    rsyncArgs = append(rsyncArgs, "--exclude=*", "--delete")
 
     log.Infof("Mirror setup: rsync from %s to %s", srcPath, mirrorPath)
     rsyncCmd := append(rsyncArgs, srcPath, mirrorPath)
