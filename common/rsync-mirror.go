@@ -47,6 +47,7 @@ func Mirror(srcDir string) (mirrorDir string, cleanup func() error, err error) {
 
     log.Infof("Mirror setup: rsync from %s to %s", srcPath, mirrorPath)
     rsyncCmd := append(rsyncArgs, srcPath, mirrorPath)
+    log.Infof("  rsync args %v", rsyncCmd)
     cmd := exec.Command("rsync", rsyncCmd...)
 
     if out, err2 := cmd.CombinedOutput(); err2 != nil {
