@@ -20,10 +20,11 @@ func CanonicalImageName(ref string) (string, error) {
 	}
 
 	if shortnames.IsShortName(ref) {
-		candidates, err := shortnames.Resolve(nil, ref)
+		resolved, err := shortnames.Resolve(nil, ref)
 		if err != nil {
 			return "", fmt.Errorf("failed to resolve short name %q: %w", ref, err)
 		}
+		candidates := resolved.Candidates()
 		if len(candidates) == 0 {
 			return "", fmt.Errorf("no resolution candidates found for short name %q", ref)
 		}
