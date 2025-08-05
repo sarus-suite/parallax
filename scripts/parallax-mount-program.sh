@@ -165,17 +165,33 @@ do_squash_mount() {
     local squash_file="$1"
     local target_dir="$2"
 
-	if [[ -n "$PARALLAX_MP_SQUASHFUSE_FLAG" ]]; then
-		IFS=' ' read -r -a PARALLAX_MP_SQUASHFUSE_FLAG_ARR <<< "$PARALLAX_MP_SQUASHFUSE_FLAG"
-	else
-		PARALLAX_MP_SQUASHFUSE_FLAG_ARR=()
-	fi
+    if [[ -n "$PARALLAX_MP_SQUASHFUSE_FLAG" ]]; then
+        IFS=' ' read -r -a PARALLAX_MP_SQUASHFUSE_FLAG_ARR <<< "$PARALLAX_MP_SQUASHFUSE_FLAG"
+    else
+        PARALLAX_MP_SQUASHFUSE_FLAG_ARR=()
+    fi
 
-	# Here we only check if link is a symlink to the actual squash file, as this is what Parallax migration does
-	if [ -h "$squash_file" ]; then
-        run_and_log "Mounting squash file." "$SQUASHFUSE_CMD" "$squash_file" "$target_dir" ${PARALLAX_MP_SQUASHFUSE_FLAG_ARR[@]}
-        if [ $? -ne 0 ]; then
-            handle_error "squashfuse failed"
+    # Here we only check if link is a symlink to the actual squash file, as this is what Parallax migration does
+    if [ -h "$squash_file" ]; then
+        log "INFO" "Mounting squash file."
+        output=$("$SQUASHFUSE_CMD" "$squash_file" "$target_dir" "${PARALLAX_MP_SQUASHFUSE_FLAG_ARR[@]}" 2>&1)
+        exit_code=$?
+
+        if [ $exit_code -eq 0 ]; then
+            log "INFO" "Mounting squash file successful"
+        else
+            log "WARNING" "Mounting squash file failed: $output"
+
+            if echo "$output" | grep -q "mountpoint is not empty"; then
+                log "WARNING" "Retry squashfuse with -o nonempty"
+                run_and_log "Mounting squash file." "$SQUASHFUSE_CMD" "$squash_file" "$target_dir" -o nonempty
+
+                if [ $? -ne 0 ]; then
+                    handle_error "squashfuse failed after retry"
+                fi
+			else
+				handle_error "squashfuse failed WITHOUT retry"
+			fi
         fi
     else
         log "INFO" "No squash file detected, skipping squash mount"
