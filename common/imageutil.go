@@ -24,12 +24,11 @@ func CanonicalImageName(ref string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed to resolve short name %q: %w", ref, err)
 		}
-		candidates := resolved.Candidates()
-		if len(candidates) == 0 {
+		if len(resolved.PullCandidates) == 0 {
 			return "", fmt.Errorf("no resolution candidates found for short name %q", ref)
 		}
-		name = candidates[0].String() // take first candidate
-		return name, nil // Already includes tag
+		candidate := resolved.PullCandidates[0] // take first candidate
+		return candidate.Value.String(), nil // Already includes tag
 	}
 
 	return fmt.Sprintf("%s:%s", name, tag), nil
