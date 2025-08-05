@@ -29,10 +29,10 @@ func Mirror(srcDir string) (mirrorDir string, cleanup func() error, err error) {
 
     // Define PodmanOverlay file and directory patterns for mirror
     allowedPatterns := []string{
-        "overlay/",
-        "overlay-containers/",
-        "overlay-images/",
-        "overlay-layers/",
+        "overlay/***",
+        "overlay-containers/***",
+        "overlay-images/***",
+        "overlay-layers/***",
         "storage.lock",
         "userns.lock",
     }
