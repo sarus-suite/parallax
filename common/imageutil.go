@@ -5,32 +5,34 @@ import (
 	"strings"
 
 	"github.com/containers/image/v5/pkg/shortnames"
-	"github.com/containers/image/v5/pkg/sysregistriesv2"
 	"github.com/containers/storage"
 )
 
-// We get fully qualified name
+// We get fully qualified name with more robust Resolve()
 func CanonicalImageName(ref string) (string, error) {
 	parts := strings.Split(ref, ":")
 	name := parts[0]
 
-	// if there is no tag, we default it to latest
+	// default to "latest"
 	tag := "latest"
 	if len(parts) == 2 && parts[1] != "" {
 		tag = parts[1]
 	}
 
 	if shortnames.IsShortName(ref) {
-		alias, _, err := sysregistriesv2.ResolveShortNameAlias(nil, name)
+		resolved, err := shortnames.Resolve(nil, ref)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("failed to resolve short name %q: %w", ref, err)
 		}
-		name = alias.Name()
+		if len(resolved.PullCandidates) == 0 {
+			return "", fmt.Errorf("no resolution candidates found for short name %q", ref)
+		}
+		candidate := resolved.PullCandidates[0] // take first candidate
+		return candidate.Value.String(), nil // Already includes tag
 	}
 
 	return fmt.Sprintf("%s:%s", name, tag), nil
 }
-
 
 func FindImage(store storage.Store, name string) (storage.Image, error){
 	canonical, err := CanonicalImageName(name)
