@@ -54,7 +54,7 @@ list_squash_files() {
 
 ### Tests
 
-@test "image name: alpine" {
+@test "image name not tagged: alpine" {
   run pull_image "alpine"
   [ "$status" -eq 0 ]
 
@@ -73,7 +73,7 @@ list_squash_files() {
   [ "$status" -ne 0 ]
 }
 
-@test "image name: alpine:latest" {
+@test "image name tagged latest: alpine:latest" {
   run pull_image "alpine:latest"
   [ "$status" -eq 0 ]
 
@@ -86,6 +86,64 @@ list_squash_files() {
   [ "$output" = "ok" ]
 
   run rmi_image "alpine:latest"
+  [ "$status" -eq 0 ]
+
+  run list_squash_files
+  [ "$status" -ne 0 ]
+}
+
+@test "image name tagged non latest: alpine:3.22.1" {
+  run pull_image "alpine:3.22.1"
+  [ "$status" -eq 0 ]
+
+  run migrate_image "alpine:3.22.1"
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "Migration successfully completed" || "$output" =~ "Nothing to do." ]]
+
+  run run_image "alpine:3.22.1"
+  [ "$status" -eq 0 ]
+  [ "$output" = "ok" ]
+
+  run rmi_image "alpine:3.22.1"
+  [ "$status" -eq 0 ]
+
+  run list_squash_files
+  [ "$status" -ne 0 ]
+}
+
+
+@test "image name with registry: docker.io/library/alpine" {
+  run pull_image "docker.io/library/alpine"
+  [ "$status" -eq 0 ]
+
+  run migrate_image "docker.io/library/alpine"
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "Migration successfully completed" || "$output" =~ "Nothing to do." ]]
+
+  run run_image "docker.io/library/alpine"
+  [ "$status" -eq 0 ]
+  [ "$output" = "ok" ]
+
+  run rmi_image "docker.io/library/alpine"
+  [ "$status" -eq 0 ]
+
+  run list_squash_files
+  [ "$status" -ne 0 ]
+}
+
+@test "image name with registry tagged: docker.io/library/alpine:3.22.1" {
+  run pull_image "docker.io/library/alpine:3.22.1"
+  [ "$status" -eq 0 ]
+
+  run migrate_image "docker.io/library/alpine:3.22.1"
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "Migration successfully completed" || "$output" =~ "Nothing to do." ]]
+
+  run run_image "docker.io/library/alpine:3.22.1"
+  [ "$status" -eq 0 ]
+  [ "$output" = "ok" ]
+
+  run rmi_image "docker.io/library/alpine:3.22.1"
   [ "$status" -eq 0 ]
 
   run list_squash_files
