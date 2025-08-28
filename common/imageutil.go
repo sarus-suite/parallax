@@ -8,6 +8,19 @@ import (
 	"github.com/containers/storage"
 )
 
+
+func splitNameTag(ref string) (string, error) {
+    lastColon := strings.LastIndex(ref, ":")
+	lastSlash := strings.LastIndex(ref, "/")
+	// Only pick tag as last content after ":" and non empty
+	if lastColon > lastSlash && lastColon != -1 {
+		return ref[:lastColon], ref[lastColon+1:]
+	}
+	// we did not find a tag
+	return ref, "latest"
+}
+
+
 // We get fully qualified name with more robust Resolve()
 func CanonicalImageName(ref string) (string, error) {
 	parts := strings.Split(ref, ":")
