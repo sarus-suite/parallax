@@ -12,10 +12,12 @@ import (
 func splitNameTag(ref string) (string, string) {
     lastColon := strings.LastIndex(ref, ":")
 	lastSlash := strings.LastIndex(ref, "/")
+
 	// Only pick tag as last content after ":" and non empty
 	if lastColon > lastSlash && lastColon != -1 {
 		return ref[:lastColon], ref[lastColon+1:]
 	}
+
 	// we did not find a tag
 	return ref, "latest"
 }
@@ -44,7 +46,7 @@ func CanonicalImageName(ref string) (string, error) {
     name, tag := splitNameTag(ref)
 
 	if hasRegistry(name) {
-    return fmt.Strintf("%s:%s", name, tag), nil
+        return fmt.Strintf("%s:%s", name, tag), nil
 	}
 
 	if shortnames.IsShortName(ref) {
@@ -52,9 +54,11 @@ func CanonicalImageName(ref string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed to resolve short name %q: %w", ref, err)
 		}
+
 		if len(resolved.PullCandidates) == 0 {
 			return "", fmt.Errorf("no resolution candidates found for short name %q", ref)
 		}
+
 		// take first candidate
 		candidate := resolved.PullCandidates[0]
 		// Candidate already includes tag
@@ -64,23 +68,41 @@ func CanonicalImageName(ref string) (string, error) {
 	return fmt.Sprintf("%s:%s", name, tag), nil
 }
 
+func FindImage(store storage.Store, name string) (storage.Image, error) {
+    imgs, err := store.Images()
+    if err != nil {
+        return storage.Image{}, fmt.Errorf("List images: %w", err)
+    }
 
-func FindImage(store storage.Store, name string) (storage.Image, error){
-	canonical, err := CanonicalImageName(name)
-	if err != nil {
-		return storage.Image{}, fmt.Errorf("Resolving canonical name %q: %w", name, err)
-	}
-	imgs, err := store.Images()
-	if err != nil {
-		return storage.Image{}, fmt.Errorf("Liust iamges: %w", err)
-	}
-	for _, img := range imgs {
-		for _, tag := range img.Names {
-			if tag == name || tag == canonical {
-				return img, nil
-			}
-		}
-	}
-	return storage.Image{}, fmt.Errorf("Image not found: %q", name)
+    base, tag := splitNameTag(name)
+
+    // Build candidate name options
+    normalized := fmt.Sprintf("%s:%s", base, tag)
+
+    localhostName := ""
+    if !hasRegistryHost(base) {
+        localhostName = fmt.Sprintf("localhost/%s:%s", base, tag)
+    }
+
+    canonical := ""
+    if fq, err := CanonicalImageName(name); err == nil {
+        canonical = fq
+    }
+
+	// loop over all images and its name for a match
+    for _, img := range imgs {
+        for _, n := range img.Names {
+            isExactName := (n == name)
+			isNormalized := (n == normalized)
+			isLocalhost := (n == localhostName)
+			isCanonical := (n == canonical)
+
+			if isExactName || isNormalized || isLocalhost || isCanonical {
+                return img, nil
+            }
+        }
+    }
+
+    return storage.Image{}, fmt.Errorf("Image not found: %q", name)
 }
 
