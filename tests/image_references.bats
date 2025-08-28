@@ -1,6 +1,6 @@
 load helpers.bash
 
-# These tests are used to validate that different ways to reference iamges work
+# These tests are used to validate that different ways to reference images work
 # pull image with ref
 # migrates it using ref with parallax
 # basic run check
@@ -92,6 +92,7 @@ cleanup_registries_conf() {
 
   run run_image "alpine"
   assert_success
+  assert_output "ok"
 
   run rmi_image "alpine"
   assert_success
@@ -114,6 +115,7 @@ cleanup_registries_conf() {
 
   run run_image "alpine:latest"
   assert_success
+  assert_output "ok"
 
   run rmi_image "alpine:latest"
   assert_success
@@ -136,6 +138,7 @@ cleanup_registries_conf() {
 
   run run_image "alpine:3.22.1"
   assert_success
+  assert_output "ok"
 
   run rmi_image "alpine:3.22.1"
   assert_success
@@ -159,6 +162,7 @@ cleanup_registries_conf() {
 
   run run_image "docker.io/library/alpine"
   assert_success
+  assert_output "ok"
 
   run rmi_image "docker.io/library/alpine"
   assert_success
@@ -181,6 +185,7 @@ cleanup_registries_conf() {
 
   run run_image "docker.io/library/alpine:3.22.1"
   assert_success
+  assert_output "ok"
 
   run rmi_image "docker.io/library/alpine:3.22.1"
   assert_success
@@ -221,6 +226,7 @@ EOF
 
   run run_image "$newref"
   assert_success
+  assert_output "ok"
 
   run rmi_image "$newref"
   assert_success
