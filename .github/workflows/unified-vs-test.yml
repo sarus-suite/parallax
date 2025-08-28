@@ -17,7 +17,12 @@ jobs:
           echo "Using temp directory: $TMP_DIR" 
 
       - name: Manually clone repo within tmp dir
-        run: git clone --depth 1 --branch "${GITHUB_REF_NAME}" https://github.com/${GITHUB_REPOSITORY}.git
+        run: |
+          git clone \
+            --depth 1 \
+            --branch "${GITHUB_REF_NAME}" \
+            --recurse-submodules \
+            https://github.com/${GITHUB_REPOSITORY}.git
         working-directory: ${{ env.TMP_DIR }}
 
       - name: List contents of TMP_DIR

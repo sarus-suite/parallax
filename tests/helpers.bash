@@ -8,6 +8,9 @@ export MOUNT_PROGRAM_PATH="${MOUNT_PROGRAM_PATH:-/mnt/nfs/git/parallax/scripts/p
 export PODMAN_RUN_OPTIONS="${PODMAN_RUN_OPTIONS:---security-opt seccomp=unconfined}"
 
 setup() {
+  load 'test_helper/bats-support/load'
+  load 'test_helper/bats-assert/load'
+
   # Seting up temp dirs and env vars
   export PODMAN_ROOT="$(mktemp -d)"
   export PODMAN_RUNROOT="$(mktemp -d)"
