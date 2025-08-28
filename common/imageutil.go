@@ -41,13 +41,10 @@ func hasRegistry(name string) bool {
 
 // We get fully qualified name with more robust Resolve()
 func CanonicalImageName(ref string) (string, error) {
-	parts := strings.Split(ref, ":")
-	name := parts[0]
+    name, tag := splitNameTag(ref)
 
-	// default to "latest"
-	tag := "latest"
-	if len(parts) == 2 && parts[1] != "" {
-		tag = parts[1]
+	if hasRegistry(name) {
+    return fmt.Strintf("%s:%s", name, tag), nil
 	}
 
 	if shortnames.IsShortName(ref) {
@@ -58,12 +55,15 @@ func CanonicalImageName(ref string) (string, error) {
 		if len(resolved.PullCandidates) == 0 {
 			return "", fmt.Errorf("no resolution candidates found for short name %q", ref)
 		}
-		candidate := resolved.PullCandidates[0] // take first candidate
-		return candidate.Value.String(), nil // Already includes tag
+		// take first candidate
+		candidate := resolved.PullCandidates[0]
+		// Candidate already includes tag
+		return candidate.Value.String(), nil
 	}
 
 	return fmt.Sprintf("%s:%s", name, tag), nil
 }
+
 
 func FindImage(store storage.Store, name string) (storage.Image, error){
 	canonical, err := CanonicalImageName(name)
