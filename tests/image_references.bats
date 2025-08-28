@@ -84,21 +84,20 @@ cleanup_registries_conf() {
   setup_registries_conf_with_alpine_alias
 
   run pull_image "alpine"
-  [ "$status" -eq 0 ]
+  assert_success
 
   run migrate_image "alpine"
-  [ "$status" -eq 0 ]
-  assert_output --partial "Migration successfully completed"
+  assert_success
+  assert_output --regexp 'Migration successfully completed|Nothing to do\.'
 
   run run_image "alpine"
-  [ "$status" -eq 0 ]
-  [ "$output" = "ok" ]
+  assert_success
 
   run rmi_image "alpine"
-  [ "$status" -eq 0 ]
+  assert_success
 
   run list_squash_files
-  [ "$status" -ne 0 ]
+  assert_failure
 
   cleanup_registries_conf
 }
@@ -107,21 +106,20 @@ cleanup_registries_conf() {
   setup_registries_conf_with_alpine_alias
 
   run pull_image "alpine:latest"
-  [ "$status" -eq 0 ]
+  assert_success
 
   run migrate_image "alpine:latest"
-  [ "$status" -eq 0 ]
-  [[ "$output" =~ "Migration successfully completed" || "$output" =~ "Nothing to do." ]]
+  assert_success
+  assert_output --regexp 'Migration successfully completed|Nothing to do\.'
 
   run run_image "alpine:latest"
-  [ "$status" -eq 0 ]
-  [ "$output" = "ok" ]
+  assert_success
 
   run rmi_image "alpine:latest"
-  [ "$status" -eq 0 ]
+  assert_success
 
   run list_squash_files
-  [ "$status" -ne 0 ]
+  assert_failure
 
   cleanup_registries_conf
 }
@@ -130,21 +128,20 @@ cleanup_registries_conf() {
   setup_registries_conf_with_alpine_alias
 
   run pull_image "alpine:3.22.1"
-  [ "$status" -eq 0 ]
+  assert_success
 
   run migrate_image "alpine:3.22.1"
-  [ "$status" -eq 0 ]
-  [[ "$output" =~ "Migration successfully completed" || "$output" =~ "Nothing to do." ]]
+  assert_success
+  assert_output --regexp 'Migration successfully completed|Nothing to do\.'
 
   run run_image "alpine:3.22.1"
-  [ "$status" -eq 0 ]
-  [ "$output" = "ok" ]
+  assert_success
 
   run rmi_image "alpine:3.22.1"
-  [ "$status" -eq 0 ]
+  assert_success
 
   run list_squash_files
-  [ "$status" -ne 0 ]
+  assert_failure
 
   cleanup_registries_conf
 }
@@ -154,21 +151,20 @@ cleanup_registries_conf() {
   setup_registries_conf_with_alpine_alias
 
   run pull_image "docker.io/library/alpine"
-  [ "$status" -eq 0 ]
+  assert_success
 
   run migrate_image "docker.io/library/alpine"
-  [ "$status" -eq 0 ]
-  [[ "$output" =~ "Migration successfully completed" || "$output" =~ "Nothing to do." ]]
+  assert_success
+  assert_output --regexp 'Migration successfully completed|Nothing to do\.'
 
   run run_image "docker.io/library/alpine"
-  [ "$status" -eq 0 ]
-  [ "$output" = "ok" ]
+  assert_success
 
   run rmi_image "docker.io/library/alpine"
-  [ "$status" -eq 0 ]
+  assert_success
 
   run list_squash_files
-  [ "$status" -ne 0 ]
+  assert_failure
 
   cleanup_registries_conf
 }
@@ -177,21 +173,20 @@ cleanup_registries_conf() {
   setup_registries_conf_with_alpine_alias
 
   run pull_image "docker.io/library/alpine:3.22.1"
-  [ "$status" -eq 0 ]
+  assert_success
 
   run migrate_image "docker.io/library/alpine:3.22.1"
-  [ "$status" -eq 0 ]
-  [[ "$output" =~ "Migration successfully completed" || "$output" =~ "Nothing to do." ]]
+  assert_success
+  assert_output --regexp 'Migration successfully completed|Nothing to do\.'
 
   run run_image "docker.io/library/alpine:3.22.1"
-  [ "$status" -eq 0 ]
-  [ "$output" = "ok" ]
+  assert_success
 
   run rmi_image "docker.io/library/alpine:3.22.1"
-  [ "$status" -eq 0 ]
+  assert_success
 
   run list_squash_files
-  [ "$status" -ne 0 ]
+  assert_failure
 
   cleanup_registries_conf
 }
@@ -202,7 +197,7 @@ cleanup_registries_conf() {
   newref="new-alpine"
 
   run pull_image "alpine:latest"
-  [ "$status" -eq 0 ]
+  assert_success
 
   # simple containerfile
   buildctx="$(mktemp -d)"
@@ -218,21 +213,20 @@ EOF
       --root "$PODMAN_ROOT" \
       --runroot "$PODMAN_RUNROOT" \
       build --pull=never -f "$buildctx/Containerfile" -t "$newref" "$buildctx"
-  [ "$status" -eq 0 ]
+  assert_success
 
   run migrate_image "$newref"
-  [ "$status" -eq 0 ]
-  [[ "$output" =~ "Migration successfully completed" || "$output" =~ "Nothing to do." ]]
+  assert_success
+  assert_output --regexp 'Migration successfully completed|Nothing to do\.'
 
   run run_image "$newref"
-  [ "$status" -eq 0 ]
-  [ "$output" = "ok" ]
+  assert_success
 
   run rmi_image "$newref"
-  [ "$status" -eq 0 ]
+  assert_success
 
   run list_squash_files
-  [ "$status" -ne 0 ]
+  assert_failure
 
   rm -rf "$buildctx"
 
