@@ -60,7 +60,7 @@ list_squash_files() {
 
   run migrate_image "alpine"
   [ "$status" -eq 0 ]
-  [[ "$output" =~ "Migration successfully completed" || "$output" =~ "Nothing to do." ]]
+  assert_output "Migration successfully completed"
 
   run run_image "alpine"
   [ "$status" -eq 0 ]
