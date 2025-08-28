@@ -52,9 +52,37 @@ list_squash_files() {
   ls "$RO_STORAGE"/overlay/**/*.squash
 }
 
+
+setup_registries_conf_with_alpine_alias() {
+  local confdir
+  confdir="$(mktemp -d)"
+  local conffile="$confdir/my-registries.conf"
+
+  cat >"$conffile" <<'EOF'
+unqualified-search-registries = ["public.ecr.aws"]
+short-name-mode = "enforcing"
+
+[aliases]
+"alpine" = "public.ecr.aws/docker/library/alpine"
+EOF
+
+  export CONTAINERS_REGISTRIES_CONF="$conffile"
+  export PODMAN_REGISTRIES_CONF_DIR="$confdir" # keep dir around for cleanup
+}
+
+cleanup_registries_conf() {
+  if [ -n "$PODMAN_REGISTRIES_CONF_DIR" ]; then
+    rm -rf "$PODMAN_REGISTRIES_CONF_DIR"
+    unset PODMAN_REGISTRIES_CONF_DIR
+  fi
+  unset CONTAINERS_REGISTRIES_CONF
+}
+
 ### Tests
 
 @test "image name not tagged: alpine" {
+  setup_registries_conf_with_alpine_alias
+
   run pull_image "alpine"
   [ "$status" -eq 0 ]
 
@@ -71,9 +99,13 @@ list_squash_files() {
 
   run list_squash_files
   [ "$status" -ne 0 ]
+
+  cleanup_registries_conf
 }
 
 @test "image name tagged latest: alpine:latest" {
+  setup_registries_conf_with_alpine_alias
+
   run pull_image "alpine:latest"
   [ "$status" -eq 0 ]
 
@@ -90,9 +122,13 @@ list_squash_files() {
 
   run list_squash_files
   [ "$status" -ne 0 ]
+
+  cleanup_registries_conf
 }
 
 @test "image name tagged non latest: alpine:3.22.1" {
+  setup_registries_conf_with_alpine_alias
+
   run pull_image "alpine:3.22.1"
   [ "$status" -eq 0 ]
 
@@ -109,10 +145,14 @@ list_squash_files() {
 
   run list_squash_files
   [ "$status" -ne 0 ]
+
+  cleanup_registries_conf
 }
 
 
 @test "image name with registry: docker.io/library/alpine" {
+  setup_registries_conf_with_alpine_alias
+
   run pull_image "docker.io/library/alpine"
   [ "$status" -eq 0 ]
 
@@ -129,9 +169,13 @@ list_squash_files() {
 
   run list_squash_files
   [ "$status" -ne 0 ]
+
+  cleanup_registries_conf
 }
 
 @test "image name with registry tagged: docker.io/library/alpine:3.22.1" {
+  setup_registries_conf_with_alpine_alias
+
   run pull_image "docker.io/library/alpine:3.22.1"
   [ "$status" -eq 0 ]
 
@@ -148,9 +192,13 @@ list_squash_files() {
 
   run list_squash_files
   [ "$status" -ne 0 ]
+
+  cleanup_registries_conf
 }
 
 @test "podman build and migrate from implicit localhost/alpine" {
+  setup_registries_conf_with_alpine_alias
+
   newref="new-alpine"
 
   run pull_image "alpine:latest"
@@ -186,5 +234,7 @@ EOF
   run list_squash_files
   [ "$status" -ne 0 ]
 
-  rm -rf buildctx
+  rm -rf "$buildctx"
+
+  cleanup_registries_conf
 }
