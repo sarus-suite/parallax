@@ -10,46 +10,46 @@ load helpers.bash
 ### Helpers
 pull_image() {
   local ref="$1"
-  echo "$PODMAN_BINARY" \
-       --root "$PODMAN_ROOT" \
-       --runroot "$PODMAN_RUNROOT" \
-       pull "$ref"
+  "$PODMAN_BINARY" \
+    --root "$PODMAN_ROOT" \
+    --runroot "$PODMAN_RUNROOT" \
+    pull "$ref"
 }
 
 migrate_image() {
   local ref="$1"
-  echo "$PARALLAX_BINARY" \
-       --podmanRoot "$PODMAN_ROOT" \
-       --roStoragePath "$RO_STORAGE" \
-       --mksquashfsPath "$MKSQUASHFS_PATH" \
-       --log-level info \
-       --migrate \
-       --image "$ref"
+  "$PARALLAX_BINARY" \
+    --podmanRoot "$PODMAN_ROOT" \
+    --roStoragePath "$RO_STORAGE" \
+    --mksquashfsPath "$MKSQUASHFS_PATH" \
+    --log-level info \
+    --migrate \
+    --image "$ref"
 }
 
 run_image() {
   local ref="$1"
-  echo "$PODMAN_BINARY" \
-       --root "$CLEAN_ROOT" \
-       --runroot "$PODMAN_RUNROOT" \
-       --storage-opt additionalimagestore="$RO_STORAGE" \
-       --storage-opt mount_program="$MOUNT_PROGRAM_PATH" \
-       run --rm $PODMAN_RUN_OPTIONS "$ref" echo ok
+  "$PODMAN_BINARY" \
+    --root "$CLEAN_ROOT" \
+    --runroot "$PODMAN_RUNROOT" \
+    --storage-opt additionalimagestore="$RO_STORAGE" \
+    --storage-opt mount_program="$MOUNT_PROGRAM_PATH" \
+    run --rm $PODMAN_RUN_OPTIONS "$ref" echo ok
 }
 
 rmi_image() {
   local ref="$1"
-  echo "$PARALLAX_BINARY" \
-       --podmanRoot "$CLEAN_ROOT" \
-       --roStoragePath "$RO_STORAGE" \
-       --mksquashfsPath "$MKSQUASHFS_PATH" \
-       --log-level info \
-       --rmi \
-       --image "$ref"
+  "$PARALLAX_BINARY" \
+    --podmanRoot "$CLEAN_ROOT" \
+    --roStoragePath "$RO_STORAGE" \
+    --mksquashfsPath "$MKSQUASHFS_PATH" \
+    --log-level info \
+    --rmi \
+    --image "$ref"
 }
 
 list_squash_files() {
-  echo ls "$RO_STORAGE"/overlay/**/*.squash
+  ls "$RO_STORAGE"/overlay/**/*.squash
 }
 
 ### Tests
@@ -60,7 +60,7 @@ list_squash_files() {
 
   run migrate_image "alpine"
   [ "$status" -eq 0 ]
-  assert_output "Migration successfully completed"
+  assert_output --partial "Migration successfully completed"
 
   run run_image "alpine"
   [ "$status" -eq 0 ]
