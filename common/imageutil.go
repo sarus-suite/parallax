@@ -9,7 +9,7 @@ import (
 )
 
 
-func splitNameTag(ref string) (string, error) {
+func splitNameTag(ref string) (string, string) {
     lastColon := strings.LastIndex(ref, ":")
 	lastSlash := strings.LastIndex(ref, "/")
 	// Only pick tag as last content after ":" and non empty
@@ -19,6 +19,24 @@ func splitNameTag(ref string) (string, error) {
 	// we did not find a tag
 	return ref, "latest"
 }
+
+
+func hasRegistry(name string) bool {
+    first := name
+
+	// find first slash and keep what is before it
+	i := strings.IndexRune(name, '/')
+	if i != -1 {
+        first = name[:i]
+	}
+
+    isLocalhost := (first == "localhost")
+	hasDomain := strings.Contains(first, ".")
+	hasPort := strings.Contains(first, ":")
+
+	return isLocalhost || hasDomain || hasPort
+}
+
 
 
 // We get fully qualified name with more robust Resolve()
