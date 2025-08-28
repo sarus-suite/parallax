@@ -46,7 +46,7 @@ func CanonicalImageName(ref string) (string, error) {
     name, tag := splitNameTag(ref)
 
 	if hasRegistry(name) {
-        return fmt.Strintf("%s:%s", name, tag), nil
+        return fmt.Sprintf("%s:%s", name, tag), nil
 	}
 
 	if shortnames.IsShortName(ref) {
@@ -80,7 +80,7 @@ func FindImage(store storage.Store, name string) (storage.Image, error) {
     normalized := fmt.Sprintf("%s:%s", base, tag)
 
     localhostName := ""
-    if !hasRegistryHost(base) {
+    if !hasRegistry(base) {
         localhostName = fmt.Sprintf("localhost/%s:%s", base, tag)
     }
 
