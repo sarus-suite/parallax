@@ -150,3 +150,41 @@ list_squash_files() {
   [ "$status" -ne 0 ]
 }
 
+@test "podman build and migrate from implicit localhost/alpine" {
+  newref="new-alpine"
+
+  run pull_image "alpine:latest"
+  [ "$status" -eq 0 ]
+
+  # simple containerfile
+  buildctx="$(mktemp -d)"
+  cat > "$buildctx/Containerfile" <<'EOF'
+FROM alpine:latest
+ENV FOO=bar
+# tiny no-op layer to ensure a change
+RUN echo "hello" > /hello.txt
+EOF
+
+  # build the new container image
+  run "$PODMAN_BINARY" \
+      --root "$PODMAN_ROOT" \
+      --runroot "$PODMAN_RUNROOT" \
+      build --pull=never -f "$buildctx/Containerfile" -t "$newref" "$buildctx"
+  [ "$status" -eq 0 ]
+
+  run migrate_image "$newref"
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "Migration successfully completed" || "$output" =~ "Nothing to do." ]]
+
+  run run_image "$newref"
+  [ "$status" -eq 0 ]
+  [ "$output" = "ok" ]
+
+  run rmi_image "$newref"
+  [ "$status" -eq 0 ]
+
+  run list_squash_files
+  [ "$status" -ne 0 ]
+
+  rm -rf buildctx
+}
