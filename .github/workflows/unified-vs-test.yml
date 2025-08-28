@@ -22,7 +22,7 @@ jobs:
             --depth 1 \
             --branch "${GITHUB_REF_NAME}" \
             --recurse-submodules \
-            https://github.com/${GITHUB_REPOSITORY}.git .
+            https://github.com/${GITHUB_REPOSITORY}.git
         working-directory: ${{ env.TMP_DIR }}
 
       - name: List contents of TMP_DIR
