@@ -68,7 +68,7 @@ jobs:
 
       - name: Inspect binary
         run: |
-          file dist/parallax-${{ github.ref_name }}-opensuse-15.6-${{ matrix.arch }}
+          stat dist/parallax-${{ github.ref_name }}-opensuse-15.6-${{ matrix.arch }}
           readelf -l dist/parallax-${{ github.ref_name }}-opensuse-15.6-${{ matrix.arch }} | grep interpreter || true
           ldd dist/parallax-${{ github.ref_name }}-opensuse-15.6-${{ matrix.arch }} || echo "static :/"
 
