@@ -1,4 +1,4 @@
-name: Release opensuse amd64 and arm64
+name: Release opensuse 15.5 amd64 and arm64
 
 on:
   push:
