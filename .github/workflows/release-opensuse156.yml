@@ -1,4 +1,4 @@
-name: Release opensuse 15.5 amd64 and arm64
+name: Release opensuse 15.6 amd64 and arm64
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
             container_opts: "--platform linux/arm64"
     runs-on: ${{ matrix.runner }}
     container:
-      image: ghcr.io/sarus-suite/parallax/ci-runner:latest
+      image: ghcr.io/sarus-suite/parallax/ci-runner-opensuse156:latest
       options: ${{ matrix.container_opts }}
       credentials:
         username: ${{ github.actor }}
@@ -63,14 +63,14 @@ jobs:
           mkdir -p dist
           go build -v -x \
               -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
-              -o dist/parallax-${{ github.ref_name }}-opensuse-15.5-${{ matrix.arch }} \
+              -o dist/parallax-${{ github.ref_name }}-opensuse-15.6-${{ matrix.arch }} \
               .
 
       - name: Inspect binary
         run: |
-          file dist/parallax-${{ github.ref_name }}-opensuse-15.5-${{ matrix.arch }}
-          readelf -l dist/parallax-${{ github.ref_name }}-opensuse-15.5-${{ matrix.arch }} | grep interpreter || true
-          ldd dist/parallax-${{ github.ref_name }}-opensuse-15.5-${{ matrix.arch }} || echo "static :/"
+          stat dist/parallax-${{ github.ref_name }}-opensuse-15.6-${{ matrix.arch }}
+          readelf -l dist/parallax-${{ github.ref_name }}-opensuse-15.6-${{ matrix.arch }} | grep interpreter || true
+          ldd dist/parallax-${{ github.ref_name }}-opensuse-15.6-${{ matrix.arch }} || echo "static :/"
 
       - name: Create or Update GitHub Release and Upload Asset
         uses: ncipollo/release-action@v1
@@ -78,7 +78,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          artifacts: dist/parallax-${{ github.ref_name }}-opensuse-15.5-${{ matrix.arch }}
+          artifacts: dist/parallax-${{ github.ref_name }}-opensuse-15.6-${{ matrix.arch }}
           allowUpdates: true
           replacesArtifacts: false
           draft: false
