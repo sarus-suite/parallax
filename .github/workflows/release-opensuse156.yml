@@ -1,0 +1,86 @@
+name: Release opensuse 15.6 amd64 and arm64
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  actions: write
+  attestations: write
+  packages: read
+
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            container_opts: "--platform linux/amd64"
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            container_opts: "--platform linux/arm64"
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: ghcr.io/sarus-suite/parallax/ci-runner-opensuse156:latest
+      options: ${{ matrix.container_opts }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_REF: ${{ github.ref }}
+        GITHUB_EVENT_PATH: ${{ github.event_path }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dump GO env
+        run: |
+          echo "--- all GO* vars ---"
+          env | grep '^GO' || true
+          echo "--- go env ---"
+          go env
+
+      - name: Install go deps
+        run: go get .
+
+      - name: Build Linux binary ${{ matrix.arch }}
+        env:
+          CGO_ENABLED: "1"
+          CC: gcc
+          GOARCH: ${{ matrix.arch }}
+          GOOS: linux
+          GOFLAGS: "-buildvcs=false"
+          GO_LDFLAGS: "-linkmode external"
+          CGO_LDFLAGS: "-g -O2"
+        run: |
+          mkdir -p dist
+          go build -v -x \
+              -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
+              -o dist/parallax-${{ github.ref_name }}-opensuse-15.6-${{ matrix.arch }} \
+              .
+
+      - name: Inspect binary
+        run: |
+          file dist/parallax-${{ github.ref_name }}-opensuse-15.6-${{ matrix.arch }}
+          readelf -l dist/parallax-${{ github.ref_name }}-opensuse-15.6-${{ matrix.arch }} | grep interpreter || true
+          ldd dist/parallax-${{ github.ref_name }}-opensuse-15.6-${{ matrix.arch }} || echo "static :/"
+
+      - name: Create or Update GitHub Release and Upload Asset
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          artifacts: dist/parallax-${{ github.ref_name }}-opensuse-15.6-${{ matrix.arch }}
+          allowUpdates: true
+          replacesArtifacts: false
+          draft: false
+          prerelease: false
+
