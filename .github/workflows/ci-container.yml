@@ -46,12 +46,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push multi-arch image
+      - name: Build & push multi-arch opensuse-15.5 image
         run: |
           docker buildx build \
             --builder "$BUILDER_INSTANCE" \
             --platform linux/amd64,linux/arm64 \
             --file .github/containers/Containerfile.ci \
             --tag ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/ci-runner:latest \
+            --push \
+            .
+
+      - name: Build & push multi-arch opensuse-15.6 image
+        run: |
+          docker buildx build \
+            --builder "$BUILDER_INSTANCE" \
+            --platform linux/amd64,linux/arm64 \
+            --file .github/containers/Containerfile-opensuse156.ci \
+            --tag ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/ci-runner-opensuse156:latest \
             --push \
             .
