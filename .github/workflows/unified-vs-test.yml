@@ -37,6 +37,7 @@ jobs:
           -w "$PWD" \
           --env TMP_DIR="$TMP_DIR" \
           --env GITHUB_REF_NAME="$GITHUB_REF_NAME" \
+          --env GITHUB_SHA="$GITHUB_SHA" \
           ghcr.io/sarus-suite/parallax/ci-runner:latest \
           bash -euxc '
             mkdir -p $TMP_DIR/dist
