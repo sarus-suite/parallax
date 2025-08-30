@@ -57,8 +57,13 @@ jobs:
             export CGO_LDFLAGS="-g -O2"
             export GOARCH="$HOST_ARCH"
             export GOOS=linux
+            export VERSION_LDFLAGS="-X parallax/common.Version=${GITHUB_REF_NAME} \
+                                  -X parallax/common.Commit=${GITHUB_SHA} \
+                                  -X parallax/common.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
 
             go build -v \
+              -ldflags "$GO_LDFLAGS $VERSION_LDFLAGS" \
               -o "$TMP_DIR/dist/$OUT" \
               .
            echo Built binary: "$TMP_DIR/dist/$OUT"
