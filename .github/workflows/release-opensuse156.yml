@@ -65,7 +65,7 @@ jobs:
         run: |
           mkdir -p dist
           go build -v -x \
-              -ldflags "$VERSION_LDFLAGS"
+              -ldflags "$VERSION_LDFLAGS" \
               -o dist/parallax-${{ github.ref_name }}-opensuse-15.6-${{ matrix.arch }} \
               .
 
