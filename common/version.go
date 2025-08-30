@@ -2,7 +2,6 @@ package common
 
 import (
     "fmt"
-	"runtime"
 )
 
 var (
@@ -12,7 +11,7 @@ var (
 	BuildDate = "unknown"
 )
 
-func Print() {
+func VersionPrint() {
     fmt.Printf("Parallax version: %s\n", Version)
 	if Commit != "" && Commit != "unknown" {
         fmt.Printf("Commit: %s\n", Commit)

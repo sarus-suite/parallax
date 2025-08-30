@@ -112,7 +112,7 @@ func ParseAndValidateFlags(fs *flag.FlagSet, args []string) (*CLI, error) {
 
 	// Fast version exit
 	if *versionF {
-		version.Print()
+		VersionPrint()
 		os.Exit(0)
 	}
 
