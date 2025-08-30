@@ -10,9 +10,6 @@ import (
 	"github.com/mattn/go-shellwords"
 )
 
-// TODO: auto gen version field
-const Version = "1.0.0"
-
 func usage_banner() {
     out := flag.CommandLine.Output()
 
@@ -115,7 +112,7 @@ func ParseAndValidateFlags(fs *flag.FlagSet, args []string) (*CLI, error) {
 
 	// Fast version exit
 	if *versionF {
-		fmt.Fprintf(os.Stdout, "Parallax version %s\n", Version)
+		version.Print()
 		os.Exit(0)
 	}
 

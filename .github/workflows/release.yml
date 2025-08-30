@@ -59,10 +59,13 @@ jobs:
           GOFLAGS: "-buildvcs=false"
           GO_LDFLAGS: "-linkmode external"
           CGO_LDFLAGS: "-g -O2"
+          VERSION_LDFLAGS: "-X parallax/common.Version=${GITHUB_REF_NAME} \
+                            -X parallax/common.Commit=${GITHUB_SHA} \
+                            -X parallax/common.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
         run: |
           mkdir -p dist
           go build -v -x \
-              -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
+              -ldflags "$VERSION_LDFLAGS" \
               -o dist/parallax-${{ github.ref_name }}-opensuse-15.5-${{ matrix.arch }} \
               .
 
