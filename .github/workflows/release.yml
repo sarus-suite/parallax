@@ -1,9 +1,9 @@
 name: Release opensuse 15.5 amd64 and arm64
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  push: {}
+    #    tags:
+    #      - 'v*.*.*'
 
 permissions:
   contents: write
@@ -59,13 +59,15 @@ jobs:
           GOFLAGS: "-buildvcs=false"
           GO_LDFLAGS: "-linkmode external"
           CGO_LDFLAGS: "-g -O2"
-          VERSION_LDFLAGS: "-X parallax/common.Version=${{ github.ref_name }} \
-                            -X parallax/common.Commit=${{ github.sha }} \
-                            -X parallax/common.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
         run: |
           mkdir -p dist
+          BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
           go build -v -x \
-              -ldflags "$GO_LDFLAGS $VERSION_LDFLAGS" \
+              -ldflags "$GO_LDFLAGS \
+                -X=parallax/common.Version=${{ github.ref_name }} \
+                -X=parallax/common.Commit=${{ github.sha }} \
+                -X=parallax/common.BuildDate=${BUILD_DATE}" \
               -o dist/parallax-${{ github.ref_name }}-opensuse-15.5-${{ matrix.arch }} \
               .
 
@@ -75,15 +77,15 @@ jobs:
           readelf -l dist/parallax-${{ github.ref_name }}-opensuse-15.5-${{ matrix.arch }} | grep interpreter || true
           ldd dist/parallax-${{ github.ref_name }}-opensuse-15.5-${{ matrix.arch }} || echo "static :/"
 
-      - name: Create or Update GitHub Release and Upload Asset
-        uses: ncipollo/release-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          artifacts: dist/parallax-${{ github.ref_name }}-opensuse-15.5-${{ matrix.arch }}
-          allowUpdates: true
-          replacesArtifacts: false
-          draft: false
-          prerelease: false
-
+          #      - name: Create or Update GitHub Release and Upload Asset
+          #        uses: ncipollo/release-action@v1
+          #        with:
+          #          token: ${{ secrets.GITHUB_TOKEN }}
+          #          tag: ${{ github.ref_name }}
+          #          name: Release ${{ github.ref_name }}
+          #          artifacts: dist/parallax-${{ github.ref_name }}-opensuse-15.5-${{ matrix.arch }}
+          #          allowUpdates: true
+          #          replacesArtifacts: false
+          #          draft: false
+          #          prerelease: false
+          #
