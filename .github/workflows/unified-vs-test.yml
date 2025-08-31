@@ -37,6 +37,7 @@ jobs:
           -w "$PWD" \
           --env TMP_DIR="$TMP_DIR" \
           --env GITHUB_REF_NAME="$GITHUB_REF_NAME" \
+          --env GITHUB_SHA="$GITHUB_SHA" \
           ghcr.io/sarus-suite/parallax/ci-runner:latest \
           bash -euxc '
             mkdir -p $TMP_DIR/dist
@@ -57,8 +58,13 @@ jobs:
             export CGO_LDFLAGS="-g -O2"
             export GOARCH="$HOST_ARCH"
             export GOOS=linux
+            export VERSION_LDFLAGS="-X parallax/common.Version=${GITHUB_REF_NAME} \
+                                  -X parallax/common.Commit=${GITHUB_SHA} \
+                                  -X parallax/common.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
 
             go build -v \
+              -ldflags "$GO_LDFLAGS $VERSION_LDFLAGS" \
               -o "$TMP_DIR/dist/$OUT" \
               .
            echo Built binary: "$TMP_DIR/dist/$OUT"
