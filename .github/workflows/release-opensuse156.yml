@@ -1,7 +1,7 @@
 name: Release opensuse 15.6 amd64 and arm64
 
 on:
-  push:
+  push: 
     tags:
       - 'v*.*.*'
 
@@ -59,13 +59,15 @@ jobs:
           GOFLAGS: "-buildvcs=false"
           GO_LDFLAGS: "-linkmode external"
           CGO_LDFLAGS: "-g -O2"
-          VERSION_LDFLAGS: "-X parallax/common.Version=${{ github.ref_name }} \
-                            -X parallax/common.Commit=${{ github.sha }} \
-                            -X parallax/common.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
         run: |
           mkdir -p dist
+          BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
           go build -v -x \
-              -ldflags "$GO_LDFLAGS $VERSION_LDFLAGS" \
+              -ldflags "$GO_LDFLAGS \
+                -X=parallax/common.Version=${{ github.ref_name }} \
+                -X=parallax/common.Commit=${{ github.sha }} \
+                -X=parallax/common.BuildDate=${BUILD_DATE}" \
               -o dist/parallax-${{ github.ref_name }}-opensuse-15.6-${{ matrix.arch }} \
               .
 
