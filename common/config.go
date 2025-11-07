@@ -54,15 +54,22 @@ func ValidateRoStore(path string) error {
 		return nil
 	}
 
-	// Validate that at least Podman-overlay Store subdirectories are present
-	requiredSubdirs := []string{"overlay", "overlay-images", "overlay-layers"}
-	for _, dir := range requiredSubdirs {
+    // Accept any of the common podman-overlay store subdirs is present
+    hasSubdirs := false
+	storeSubdirs := []string{"overlay", "overlay-images", "overlay-layers"}
+	for _, dir := range storeSubdirs {
 		fullPath := filepath.Join(path, dir)
-		if err := IsDir(fullPath); err != nil {
-			return fmt.Errorf("storage validation failed: %w", err)
+		if _, err := os.Stat(fullPath); err == nil {
+			// We found a subdir, we can break loop
+            hasSubdirs = true
+			break
 		}
 	}
+	if !hasSubdirs {
+        return fmt.Errorf("storage validation failed, non-empty and does not look like a podman-overlay store")
+	}
 
+    // Good enough check, dir looks like a podman overlay store
 	return nil
 }
 
