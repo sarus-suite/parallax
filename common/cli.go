@@ -30,6 +30,7 @@ Options:
         "migrate",
         "rmi",
         "image",
+		"config",
         "podmanRoot",
         "roStoragePath",
         "mksquashfsPath",
@@ -57,11 +58,7 @@ func printFlag(out io.Writer, f *flag.Flag) {
     line := fmt.Sprintf("  --%s", f.Name)
 
     // alignment
-	if len(f.Name) < 8 {
-        line += "\t"
-    } else {
-        line += "\t"
-    }
+    line += "\t"
 
     // usage text
     line += f.Usage
@@ -102,6 +99,8 @@ func ParseAndValidateFlags(fs *flag.FlagSet, args []string) (*CLI, error) {
 	rmiF       := fs.Bool("rmi", false, "Removes an image")
 	versionF   := fs.Bool("version", false, "Print version")
 
+	configF    := fs.String("config", "/etc/parallax.conf", "Path to config file (KEY=VALUE)")
+
 	// Pass the new help banner
 	fs.Usage = usage_banner
 
@@ -114,6 +113,26 @@ func ParseAndValidateFlags(fs *flag.FlagSet, args []string) (*CLI, error) {
 	if *versionF {
 		VersionPrint()
 		os.Exit(0)
+	}
+
+	setFlags := CollectSetFlags(fs)
+	explicitConfig := setFlags["config"]
+
+	if *configF != "" {
+		if _, statErr := os.Stat(*configF); statErr == nil {
+			kv, loadErr := LoadKeyValueFile(*configF)
+			if loadErr != nil {
+				return nil, loadErr
+			}
+			ApplyConfigs(setFlags, kv, podmanRoot, roStorage, mksquashfs, mksOptsF, logLevelF)
+		} else if os.IsNotExist(statErr) {
+			if explicitConfig {
+				return nil, fmt.Errorf("Config file not found: %s", *configF)
+			}
+			// if config is missing but is the default, we ignore and continue
+		} else {
+			return nil, fmt.Errorf("Failed config file stat %s: %w", *configF, statErr)
+		}
 	}
 
 	// Validate that options flags migrate and rmi are exclusive
