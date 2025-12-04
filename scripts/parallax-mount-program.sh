@@ -15,69 +15,11 @@ UMOUNT_WAIT_DELAY=${UMOUNT_WAIT_DELAY:-"30"}
 declare -A LOG_LEVELS
 LOG_LEVELS=( ["ERROR"]=0 ["WARNING"]=1 ["INFO"]=2 ["DEBUG"]=3 )
 
-LOG_LEVEL="${PARALLAX_MP_LOGLEVEL:-INFO}"  # Set log level or default to INFO
-LOG_FILE="${PARALLAX_MP_LOGFILE:-/tmp/parallax-${UID}/mount_program.log}" # Set log file
-mkdir -p "$(dirname "$LOG_FILE")"
+
 
 ###########################
-# Configuration file logic
+# General support functions
 ###########################
-DEFAULT_CONFIG="/etc/parallax-mount.conf"
-
-CONFIG_FILE="${PARALLAX_MP_CONFIG:-$DEFAULT_CONFIG}"
-## lets source the config if it is there, silent skip if file is not there
-if [ -r "$CONFIG_FILE" ]; then
-	log "INFO" "Reading config file $CONFIG_FILE"
-    source "$CONFIG_FILE" \
-      || { echo "Error: failed to load config $CONFIG_FILE" >&2; exit 1; }
-fi
-
-## Defaults and validation
-: "${PARALLAX_MP_INOTIFYWAIT_CMD:=inotifywait}"
-: "${PARALLAX_MP_FUSE_OVERLAYFS_CMD:=fuse-overlayfs}"
-: "${PARALLAX_MP_SQUASHFUSE_CMD:=squashfuse}"
-# ignore squashfuse flag if not set
-#: "${PARALLAX_MP_SQUASHFUSE_FLAG:=''}"
-
-REQUIRED_CFG_VARS=(
-  PARALLAX_MP_INOTIFYWAIT_CMD
-  PARALLAX_MP_FUSE_OVERLAYFS_CMD
-  PARALLAX_MP_SQUASHFUSE_CMD
-)
-# for each required config var
-for cfg in "${REQUIRED_CFG_VARS[@]}"; do
-  # expand the variable from the config list
-  cmd="${!cfg}"
-  if [ -z "$cmd" ]; then
-    echo "Error: $var must be set (env or config)" >&2
-    exit 1
-  fi
-  if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "Error: $var=\"$cmd\" not found or not executable" >&2
-    exit 1
-  fi
-done
-INOTIFYWAIT_CMD="${PARALLAX_MP_INOTIFYWAIT_CMD}"
-FUSE_OVERLAYFS_CMD="${PARALLAX_MP_FUSE_OVERLAYFS_CMD}"
-SQUASHFUSE_CMD="${PARALLAX_MP_SQUASHFUSE_CMD}"
-
-# List of all dependency-tools
-DEPENDENCIES=(
-  "$INOTIFYWAIT_CMD"
-  "$FUSE_OVERLAYFS_CMD"
-  "$SQUASHFUSE_CMD"
-)
-
-verify_dependencies
-
-## Ensure log file directory exists or create it if possible
-mkdir -p "$(dirname "$LOG_FILE")" || { echo "Error: Failed to create log directory" >&2; exit 1; }
-## Ensure LOG_LEVEL is valid; default to INFO
-if [[ -z "${LOG_LEVELS[$LOG_LEVEL]}" ]]; then
-    echo "Invalid log level '$LOG_LEVEL'. Defaulting to INFO." >&2
-    LOG_LEVEL="INFO"
-fi
-
 
 check_log_level() {
     local msg_level="$1"
@@ -97,7 +39,6 @@ log() {
     fi
 }
 
-# Support functions
 handle_error() {
     log "ERROR" "$1"
     echo "Error: $1" >&2
@@ -112,6 +53,75 @@ verify_dependencies() {
     done
     log "INFO" "All dependencies are available"
 }
+
+
+
+
+###########################
+# Configuration file logic
+###########################
+DEFAULT_CONFIG="/etc/parallax-mount.conf"
+
+CONFIG_FILE="${PARALLAX_MP_CONFIG:-$DEFAULT_CONFIG}"
+## lets source the config if it is there, silent skip if file is not there
+if [ -r "$CONFIG_FILE" ]; then
+    source "$CONFIG_FILE" \
+      || { echo "Error: failed to load config $CONFIG_FILE" >&2; exit 1; }
+fi
+
+## Defaults and validation
+LOG_LEVEL="${PARALLAX_MP_LOGLEVEL:-INFO}"  # Set log level or default to INFO
+LOG_FILE="${PARALLAX_MP_LOGFILE:-/tmp/parallax-${UID}/mount_program.log}" # Set log file
+
+: "${PARALLAX_MP_INOTIFYWAIT_CMD:=inotifywait}"
+: "${PARALLAX_MP_FUSE_OVERLAYFS_CMD:=fuse-overlayfs}"
+: "${PARALLAX_MP_SQUASHFUSE_CMD:=squashfuse}"
+# ignore squashfuse flag if not set
+#: "${PARALLAX_MP_SQUASHFUSE_FLAG:=''}"
+
+
+REQUIRED_CFG_VARS=(
+  PARALLAX_MP_INOTIFYWAIT_CMD
+  PARALLAX_MP_FUSE_OVERLAYFS_CMD
+  PARALLAX_MP_SQUASHFUSE_CMD
+)
+# for each required config var
+for cfg in "${REQUIRED_CFG_VARS[@]}"; do
+  # expand the variable from the config list
+  cmd="${!cfg}"
+  if [ -z "$cmd" ]; then
+    echo "Error: $cfg must be set (env or config)" >&2
+    exit 1
+  fi
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "Error: $cmd not found or not executable" >&2
+    exit 1
+  fi
+done
+INOTIFYWAIT_CMD="${PARALLAX_MP_INOTIFYWAIT_CMD}"
+FUSE_OVERLAYFS_CMD="${PARALLAX_MP_FUSE_OVERLAYFS_CMD}"
+SQUASHFUSE_CMD="${PARALLAX_MP_SQUASHFUSE_CMD}"
+
+
+# List of all dependency-tools
+DEPENDENCIES=(
+  "$INOTIFYWAIT_CMD"
+  "$FUSE_OVERLAYFS_CMD"
+  "$SQUASHFUSE_CMD"
+)
+
+## Ensure log file directory exists or create it if possible
+mkdir -p "$(dirname "$LOG_FILE")" || { echo "Error: Failed to create log directory" >&2; exit 1; }
+## Ensure LOG_LEVEL is valid; default to INFO
+if [[ -z "${LOG_LEVELS[$LOG_LEVEL]}" ]]; then
+    echo "Invalid log level '$LOG_LEVEL'. Defaulting to INFO." >&2
+    LOG_LEVEL="INFO"
+fi
+
+
+###########################
+# Logic support functions
+###########################
 
 # TODO: consider logic swap, normally a return 1 means error but I did the exist with a 1
 verify_file_exists() {
@@ -206,7 +216,9 @@ do_fuse_mount() {
  #   log "INFO" "Fuse-overlayfs mount successful"
 }
 
+#########################
 # Watcher unmount process
+#########################
 run_watcher() {
     local mount_dir="$1"
     local squash_file="$2"
@@ -242,10 +254,10 @@ run_watcher() {
         log "ERROR" "inotifywait failed with exit code $exit_code: $output"
     fi
 
-    log "INFO" "Attempt unmounting $squash_file"
-    unmount_with_retries "$squash_file"
+    log "INFO" "Attempt unmounting $mount_dir"
+    unmount_with_retries "$mount_dir"
 
-    log "INFO" "Watcher DONE for $squash_file"
+    log "INFO" "Watcher DONE for $mount_dir"
 }
 
 run_and_log() {
@@ -266,9 +278,11 @@ run_and_log() {
     fi
 }
 
-# Core logic
+##########################
+# Core mount program logic
+##########################
 main() {
-#    verify_dependencies
+    verify_dependencies
 
     # Extract lower directory and squash file
     LOWER_DIR=$(echo "$@" | sed 's/,upperdir.*//' | sed 's/.*lowerdir=//' | sed 's/.*://')
@@ -288,8 +302,8 @@ main() {
       do_fuse_mount "$@"
 
       # Permission reset
-      run_and_log "Updating permissions for $MOUNT_DIR" chmod a+rx $MOUNT_DIR
-      run_and_log "Listing directory for $MOUNT_DIR" ls -ld $MOUNT_DIR >> $LOG_FILE
+      run_and_log "Updating permissions for $MOUNT_DIR" chmod a+rx "$MOUNT_DIR"
+      run_and_log "Listing directory for $MOUNT_DIR" ls -ld "$MOUNT_DIR"
 
       # Watcher as background process to unmount
       # "0<&-" drop stdin
