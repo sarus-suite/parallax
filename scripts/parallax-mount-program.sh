@@ -181,10 +181,22 @@ do_squash_mount() {
         PARALLAX_MP_SQUASHFUSE_FLAG_ARR=()
     fi
 
+	# Optional uid/gid passthrough (both needs to be set)
+    local PARALLAX_MP_UID_GID_OPTS=()
+    if [[ -n "${PARALLAX_MP_UID:-}" && -n "${PARALLAX_MP_GID:-}" ]]; then
+        PARALLAX_MP_UID_GID_OPTS=(-o "uid=${PARALLAX_MP_UID},gid=${PARALLAX_MP_GID}")
+        log "INFO" "Applying squashfuse uid/gid mapping: uid=${PARALLAX_MP_UID} gid=${PARALLAX_MP_GID}"
+    fi
+
+    local SQUASHFUSE_OPTS=(
+        "${PARALLAX_MP_SQUASHFUSE_FLAG_ARR[@]}"
+        "${PARALLAX_MP_UID_GID_OPTS[@]}"
+    )
+
     # Here we only check if link is a symlink to the actual squash file, as this is what Parallax migration does
     if [ -h "$squash_file" ]; then
         log "INFO" "Mounting squash file."
-        output=$("$SQUASHFUSE_CMD" "$squash_file" "$target_dir" "${PARALLAX_MP_SQUASHFUSE_FLAG_ARR[@]}" 2>&1)
+        output=$("$SQUASHFUSE_CMD" "$squash_file" "$target_dir" "${SQUASHFUSE_OPTS[@]}" 2>&1)
         exit_code=$?
 
         if [ $exit_code -eq 0 ]; then
@@ -194,7 +206,7 @@ do_squash_mount() {
 
             if echo "$output" | grep -q "mountpoint is not empty"; then
                 log "WARNING" "Retry squashfuse with -o nonempty"
-                run_and_log "Mounting squash file." "$SQUASHFUSE_CMD" "$squash_file" "$target_dir" -o nonempty
+                run_and_log "Mounting squash file." "$SQUASHFUSE_CMD" "$squash_file" "$target_dir" "${SQUASHFUSE_OPTS[@]}" -o nonempty
 
                 if [ $? -ne 0 ]; then
                     handle_error "squashfuse failed after retry"
