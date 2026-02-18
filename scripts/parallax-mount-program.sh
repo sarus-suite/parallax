@@ -75,7 +75,7 @@ LOG_FILE="${PARALLAX_MP_LOGFILE:-/tmp/parallax-${UID}/mount_program.log}" # Set 
 
 : "${PARALLAX_MP_INOTIFYWAIT_CMD:=inotifywait}"
 : "${PARALLAX_MP_FUSE_OVERLAYFS_CMD:=fuse-overlayfs}"
-: "${PARALLAX_MP_SQUASHFUSE_CMD:=squashfuse}"
+: "${PARALLAX_MP_SQUASHFUSE_CMD:=squashfuse_ll}"
 # ignore squashfuse flag if not set
 #: "${PARALLAX_MP_SQUASHFUSE_FLAG:=''}"
 
@@ -195,8 +195,8 @@ do_squash_mount() {
 
     # Here we only check if link is a symlink to the actual squash file, as this is what Parallax migration does
     if [ -h "$squash_file" ]; then
-        log "INFO" "Mounting squash file."
-        output=$("$SQUASHFUSE_CMD" "$squash_file" "$target_dir" "${SQUASHFUSE_OPTS[@]}" 2>&1)
+        log "INFO" "Running (Mounting squash file\.): $SQUASHFUSE_CMD ${SQUASHFUSE_OPTS[*]}"
+        output=$("$SQUASHFUSE_CMD" "${SQUASHFUSE_OPTS[@]}" "$squash_file" "$target_dir" 2>&1)
         exit_code=$?
 
         if [ $exit_code -eq 0 ]; then
