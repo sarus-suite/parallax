@@ -171,6 +171,90 @@ unmount_with_retries() {
     handle_error "Failed to unmount $mount_path after $UMOUNT_WAIT_RETRIES retries"
 }
 
+
+wait_for_fuse_mount() {
+    local mount_point="$1"
+    local relpath="${2:-}"   # optional: path inside mount
+    local tries="${PARALLAX_MP_MOUNT_WAIT_TRIES:-5000}"
+    local delay="${PARALLAX_MP_MOUNT_WAIT_DELAY:-0.01}"
+
+    for i in $(seq 1 "$tries"); do
+        if mountpoint -q "$mount_point"; then
+            # dereference symlink and force directory traversal
+            if ls -1 "$mount_point"/ >/dev/null 2>&1; then
+                if [[ -z "$relpath" ]]; then
+                    log "INFO" "FUSE mount ready: $mount_point"
+                    if check_log_level "DEBUG"; then
+                        ls -la "$mount_point"/ >>"$LOG_FILE" 2>&1
+                    fi
+                    return 0
+                fi
+
+                # Specific file readiness check
+                if [[ -f "$mount_point/$relpath" ]] && head -c 1 "$mount_point/$relpath" >/dev/null 2>&1; then
+                    log "INFO" "FUSE mount ready (found $relpath): $mount_point"
+                    if check_log_level "DEBUG"; then
+                        ls -la "$mount_point"/ >>"$LOG_FILE" 2>&1
+                        ls -la "$mount_point/$(dirname "$relpath")" >>"$LOG_FILE" 2>&1 || true
+                        ls -la "$mount_point/$relpath" >>"$LOG_FILE" 2>&1 || true
+                        head -n 5 "$mount_point/$relpath" >>"$LOG_FILE" 2>&1 || true
+                    fi
+                    return 0
+                fi
+            fi
+        fi
+        log "INFO" "FUSE mount not ready ($relpath): $mount_point"
+        sleep "$delay"
+    done
+
+    log "ERROR" "Timed out waiting for FUSE mount: $mount_point (relpath=${relpath:-<none>})"
+    return 1
+}
+
+
+wait_for_overlay_mount() {
+    local mount_point="$1"
+    local relpath="${2:-}"   # optional: path inside merged overlay
+    local tries="${PARALLAX_MP_OVERLAY_WAIT_TRIES:-5000}"
+    local delay="${PARALLAX_MP_OVERLAY_WAIT_DELAY:-0.01}"
+
+    for i in $(seq 1 "$tries"); do
+        if mountpoint -q "$mount_point"; then
+            # Force directory traversal (also dereferences symlinks)
+            if ls -1 "$mount_point"/ >/dev/null 2>&1; then
+                if [[ -z "$relpath" ]]; then
+                    log "INFO" "Overlay mount ready: $mount_point"
+                    if check_log_level "DEBUG"; then
+                        ls -la "$mount_point"/ >>"$LOG_FILE" 2>&1
+                    fi
+                    return 0
+                fi
+
+                # Specific file readiness: exists and can really be opened/read
+                local p="$mount_point/$relpath"
+                if [[ -f "$p" ]] && head -c 1 "$p" >/dev/null 2>&1; then
+                    log "INFO" "Overlay mount ready (opened $relpath): $mount_point"
+                    if check_log_level "DEBUG"; then
+                        ls -la "$mount_point"/ >>"$LOG_FILE" 2>&1
+                        ls -la "$(dirname "$p")" >>"$LOG_FILE" 2>&1 || true
+                        ls -la "$p" >>"$LOG_FILE" 2>&1 || true
+                        head -n 5 "$p" >>"$LOG_FILE" 2>&1 || true
+                    fi
+                    return 0
+                fi
+            fi
+        fi
+
+        log "INFO" "Overlay mount not ready (${relpath:-<none>}): $mount_point"
+        sleep "$delay"
+    done
+
+    log "ERROR" "Timed out waiting for overlay mount: $mount_point (relpath=${relpath:-<none>})"
+    return 1
+}
+
+
+
 do_squash_mount() {
     local squash_file="$1"
     local target_dir="$2"
@@ -215,7 +299,13 @@ do_squash_mount() {
 				handle_error "squashfuse failed WITHOUT retry"
 			fi
         fi
-    else
+
+        # validate mount is ready
+        #wait_for_fuse_mount "$target_dir" "opt/nvidia/nvidia_entrypoint.sh" \
+        #  || handle_error "squashfuse mount not ready: $target_dir (missing opt/nvidia/nvidia_entrypoint.sh)"
+        wait_for_fuse_mount "$target_dir" || handle_error "squashfuse mount not ready: $target_dir"
+
+	else
         log "INFO" "No squash file detected, skipping squash mount"
     fi
 }
@@ -312,6 +402,10 @@ main() {
       # Do the mounts
       do_squash_mount "${LOWER_DIR}.squash" "$LOWER_DIR"
       do_fuse_mount "$@"
+
+      # Wait for fuse mounts to be ready
+      #wait_for_overlay_mount "$MOUNT_DIR" "opt/nvidia/nvidia_entrypoint.sh" || handle_error "overlay mount not ready: $MOUNT_DIR"
+      wait_for_overlay_mount "$MOUNT_DIR" || handle_error "overlay mount not ready: $MOUNT_DIR"
 
       # Permission reset
       run_and_log "Updating permissions for $MOUNT_DIR" chmod a+rx "$MOUNT_DIR"
