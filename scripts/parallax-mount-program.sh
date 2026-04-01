@@ -323,6 +323,9 @@ run_watcher() {
     log "INFO" "Attempt unmounting $mount_dir"
     unmount_with_retries "$mount_dir"
 
+    log "INFO" "Attempt unmounting $squash_file"
+    unmount_with_retries "$squash_file"
+
     log "INFO" "Watcher DONE for $mount_dir"
 }
 
