@@ -6,7 +6,7 @@
       "GO_VERSION": "1.24.0"
     }
   },
-  "workspaceFolder": "/workspaces/the_parallax",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "postCreateCommand": "go mod download",
   "customizations": {
     "vscode": {
