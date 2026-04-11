@@ -209,9 +209,10 @@ jobs:
         run: |
           export PATH="$HOST_TOOLS_DIR/bin:$PATH"
           export PODMAN_BINARY="$HOST_TOOLS_DIR/bin/podman"
+          export BATS_BINARY="$HOST_TOOLS_DIR/bats/bin/bats"
 
           "$PODMAN_BINARY" version
-          "$HOST_TOOLS_DIR/bin/bats" --version
+          "$BATS_BINARY" --version
           "$PARALLAX_BINARY" --version
 
       - name: Simple parallax test
@@ -264,7 +265,8 @@ jobs:
         run: |
           export PATH="$HOST_TOOLS_DIR/bin:$PATH"
           export PODMAN_BINARY="$HOST_TOOLS_DIR/bin/podman"
+          export BATS_BINARY="$HOST_TOOLS_DIR/bats/bin/bats"
           export MOUNT_PROGRAM_PATH="$HOST_TOOLS_DIR/bin/parallax-mount-program"
           export PARALLAX_MP_SQUASHFUSE_FLAG="-o nonempty"
 
-          "$HOST_TOOLS_DIR/bin/bats" tests
+          "$BATS_BINARY" tests
