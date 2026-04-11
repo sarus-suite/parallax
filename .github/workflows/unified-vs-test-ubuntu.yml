@@ -118,8 +118,11 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          mkdir -p .ci-tools
-          tar -C .ci-tools -xzf ".ci-artifacts/${{ needs.build-host-tools.outputs.artifact-name }}.tar.gz"
+          HOST_TOOLS_ROOT="$RUNNER_TEMP/ci-tools"
+          rm -rf "$HOST_TOOLS_ROOT"
+          mkdir -p "$HOST_TOOLS_ROOT"
+          tar -C "$HOST_TOOLS_ROOT" -xzf ".ci-artifacts/${{ needs.build-host-tools.outputs.artifact-name }}.tar.gz"
+          echo "HOST_TOOLS_DIR=$HOST_TOOLS_ROOT/host-tools" >> "$GITHUB_ENV"
 
       - name: Install runtime dependencies
         run: |
@@ -165,12 +168,17 @@ jobs:
             echo "Built binary: dist/$OUT"
             '
 
+      - name: Copy binary to runner temp
+        shell: bash
+        run: |
+          set -euxo pipefail
+          install -Dm0755 "$GITHUB_WORKSPACE/dist/parallax" "$RUNNER_TEMP/parallax"
+          echo "PARALLAX_BINARY=$RUNNER_TEMP/parallax" >> "$GITHUB_ENV"
+
       - name: Check host tools and binary
         run: |
-          export HOST_TOOLS_DIR="$GITHUB_WORKSPACE/.ci-tools/host-tools"
           export PATH="$HOST_TOOLS_DIR/bin:$PATH"
           export PODMAN_BINARY="$HOST_TOOLS_DIR/bin/podman"
-          export PARALLAX_BINARY="$GITHUB_WORKSPACE/dist/parallax"
 
           "$PODMAN_BINARY" version
           "$HOST_TOOLS_DIR/bin/bats" --version
@@ -178,10 +186,8 @@ jobs:
 
       - name: Simple parallax test
         run: |
-          export HOST_TOOLS_DIR="$GITHUB_WORKSPACE/.ci-tools/host-tools"
           export PATH="$HOST_TOOLS_DIR/bin:$PATH"
           export PODMAN_BINARY="$HOST_TOOLS_DIR/bin/podman"
-          export PARALLAX_BINARY="$GITHUB_WORKSPACE/dist/parallax"
           export MOUNT_PROGRAM_PATH="$HOST_TOOLS_DIR/bin/parallax-mount-program"
           export PODMAN_ROOT="$(mktemp -d)"
           export PODMAN_RUNROOT="$(mktemp -d)"
@@ -226,10 +232,8 @@ jobs:
 
       - name: Run Bats tests
         run: |
-          export HOST_TOOLS_DIR="$GITHUB_WORKSPACE/.ci-tools/host-tools"
           export PATH="$HOST_TOOLS_DIR/bin:$PATH"
           export PODMAN_BINARY="$HOST_TOOLS_DIR/bin/podman"
-          export PARALLAX_BINARY="$GITHUB_WORKSPACE/dist/parallax"
           export MOUNT_PROGRAM_PATH="$HOST_TOOLS_DIR/bin/parallax-mount-program"
           export PARALLAX_MP_SQUASHFUSE_FLAG="-o nonempty"
 
