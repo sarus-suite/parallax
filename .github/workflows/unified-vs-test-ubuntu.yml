@@ -233,6 +233,8 @@ jobs:
           export PATH="$HOST_TOOLS_DIR/bin:$PATH"
           export PODMAN_BINARY="$HOST_TOOLS_DIR/bin/podman"
           export MOUNT_PROGRAM_PATH="$HOST_TOOLS_DIR/bin/parallax-mount-program"
+          export PARALLAX_MP_UID="$(id -u)"
+          export PARALLAX_MP_GID="$(id -g)"
           export PODMAN_ROOT="$(mktemp -d)"
           export PODMAN_RUNROOT="$(mktemp -d)"
           export RO_STORAGE="$(mktemp -d)"
@@ -280,6 +282,8 @@ jobs:
           export PODMAN_BINARY="$HOST_TOOLS_DIR/bin/podman"
           export BATS_BINARY="$HOST_TOOLS_DIR/bats/bin/bats"
           export MOUNT_PROGRAM_PATH="$HOST_TOOLS_DIR/bin/parallax-mount-program"
+          export PARALLAX_MP_UID="$(id -u)"
+          export PARALLAX_MP_GID="$(id -g)"
           export PARALLAX_MP_SQUASHFUSE_FLAG="-o nonempty"
 
           "$BATS_BINARY" tests
