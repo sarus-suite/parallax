@@ -266,7 +266,7 @@ do_squash_mount() {
 
     # Here we only check if link is a symlink to the actual squash file, as this is what Parallax migration does
     if [ -h "$squash_file" ]; then
-        log "INFO" "Running (Mounting squash file\.): $SQUASHFUSE_CMD ${SQUASHFUSE_OPTS[*]}"
+        log "INFO" "Running (Mounting squash file.): $SQUASHFUSE_CMD ${SQUASHFUSE_OPTS[*]}"
         output=$("$SQUASHFUSE_CMD" "${SQUASHFUSE_OPTS[@]}" "$squash_file" "$target_dir" 2>&1)
         exit_code=$?
 

@@ -284,6 +284,5 @@ jobs:
           export MOUNT_PROGRAM_PATH="$HOST_TOOLS_DIR/bin/parallax-mount-program"
           export PARALLAX_MP_UID="$(id -u)"
           export PARALLAX_MP_GID="$(id -g)"
-          export PARALLAX_MP_SQUASHFUSE_FLAG="-o nonempty"
 
           "$BATS_BINARY" tests
