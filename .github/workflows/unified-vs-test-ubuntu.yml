@@ -132,6 +132,19 @@ jobs:
             squashfs-tools \
             uidmap
 
+      - name: Write /etc/containers/containers.conf
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo mkdir -p /etc/containers
+          sudo tee /etc/containers/containers.conf >/dev/null <<EOF
+          [engine]
+          runtime = "crun"
+
+          [engine.runtimes]
+          crun = ["$HOST_TOOLS_DIR/bin/crun"]
+          EOF
+
       - name: Allow unprivileged user namespaces
         run: |
           set -euxo pipefail
