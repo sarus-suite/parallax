@@ -132,6 +132,36 @@ jobs:
             squashfs-tools \
             uidmap
 
+      - name: Allow unprivileged user namespaces
+        run: |
+          set -euxo pipefail
+
+          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns
+          fi
+
+          sysctl kernel.apparmor_restrict_unprivileged_userns 2>/dev/null || true
+          sysctl kernel.unprivileged_userns_clone 2>/dev/null || true
+          sysctl user.max_user_namespaces 2>/dev/null || true
+
+      - name: Check user namespaces availability
+        run: |
+          set -euxo pipefail
+          echo "== sysctls =="
+          cat /proc/sys/kernel/unprivileged_userns_clone 2>/dev/null || true
+          cat /proc/sys/user/max_user_namespaces 2>/dev/null || true
+
+          echo "== unshare probe =="
+          if unshare -Ur true 2>/dev/null; then
+            echo "unshare -Ur: OK (user namespaces usable)"
+          else
+            echo "unshare -Ur: FAIL (user namespaces not usable here)"
+          fi
+
+          echo "== kernel config hint =="
+          zgrep CONFIG_USER_NS /proc/config.gz 2>/dev/null || true
+          grep CONFIG_USER_NS "/boot/config-$(uname -r)" 2>/dev/null || true
+
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
