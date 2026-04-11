@@ -16,8 +16,8 @@ run \
 		--log-level info \
 		--migrate \
 		--image busybox:latest
-[ "$status" -eq 0 ]
-[[ "$output" =~ "Migration successfully completed" ]]
+assert_success
+assert_output --partial "Migration successfully completed"
 
 # sanity check
 run \
@@ -27,8 +27,8 @@ run \
 		--storage-opt additionalimagestore=$RO_STORAGE \
 		--storage-opt mount_program=$MOUNT_PROGRAM_PATH \
 		run --rm $PODMAN_RUN_OPTIONS busybox:latest echo ok
-[ "$status" -eq 0 ]
-[ "$output" = "ok" ]
+assert_success
+assert_output "ok"
 
 # second migration should be stopped early with exit 0
 run \
@@ -39,8 +39,8 @@ run \
 		--log-level info \
 		--migrate \
 		--image busybox:latest
-[ "$status" -eq 0 ]
-[[ "$output" =~ "Nothing to do." ]]
+assert_success
+assert_output --partial "Nothing to do."
 
 # Remove
 run \
@@ -51,5 +51,5 @@ run \
 		--log-level info \
 		--rmi \
 		--image busybox:latest
+assert_success
 }
-
