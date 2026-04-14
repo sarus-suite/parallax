@@ -19,12 +19,13 @@ run \
 		--log-level info \
 		--migrate \
 		--image busybox:latest
-[[ "$output" =~ "Migration successfully completed" ]]
+assert_success
+assert_output --partial "Migration successfully completed"
 
 # check for squash file
 run \
 	ls "$RO_STORAGE"/overlay/**/*.squash
-[ "$status" -eq 0 ] # Exit 0 is match found
+assert_success # Exit 0 is match found
 
 run \
 	"$PODMAN_BINARY" \
@@ -33,6 +34,7 @@ run \
 		--storage-opt additionalimagestore=$RO_STORAGE \
 		--storage-opt mount_program=$MOUNT_PROGRAM_PATH \
 		images
+assert_success
 
 # Lets try running the migrated image
 run \
@@ -42,8 +44,8 @@ run \
 		--storage-opt additionalimagestore=$RO_STORAGE \
 		--storage-opt mount_program=$MOUNT_PROGRAM_PATH \
 		run --rm $PODMAN_RUN_OPTIONS busybox:latest echo ok
-[ "$status" -eq 0 ]
-[ "$output" = "ok" ]
+assert_success
+assert_output "ok"
 
 # try a removal
 run \
@@ -54,10 +56,10 @@ run \
 		--log-level info \
 		--rmi \
 		--image busybox:latest
+assert_success
 
 run \
 	ls "$RO_STORAGE"/overlay/**/*.squash
-[ "$status" -ne 0 ] # Exit 2 is no match
+assert_failure # Exit 2 is no match
 
 }
-

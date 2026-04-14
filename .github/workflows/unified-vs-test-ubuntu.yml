@@ -1,0 +1,288 @@
+name: Unified Build and Test on Ubuntu
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+permissions:
+  contents: read
+
+jobs:
+  build-host-tools:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    outputs:
+      artifact-name: ${{ steps.meta.outputs.artifact-name }}
+      cache-key: ${{ steps.meta.outputs.cache-key }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Compute cache metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          artifact_name="host-tools-linux-amd64"
+          squashfuse_version="0.6.1"
+          podman_static_version="v5.8.1"
+          bats_ref="v1.11.1"
+
+          echo "artifact-name=${artifact_name}" >> "$GITHUB_OUTPUT"
+          echo "cache-key=${{ runner.os }}-${{ runner.arch }}-host-tools-${squashfuse_version}-${podman_static_version}-${bats_ref}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore host tools cache
+        id: restore-host-tools
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .ci-cache/host-tools
+            .ci-out/host-tools
+          key: ${{ steps.meta.outputs.cache-key }}-${{ hashFiles('scripts/ci/static/build-host-tools-bundle.sh', '.github/workflows/unified-vs-test-ubuntu.yml', 'scripts/parallax-mount-program.sh') }}
+
+      - name: Install build dependencies for host tools
+        if: steps.restore-host-tools.outputs.cache-hit != 'true'
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            ca-certificates \
+            curl \
+            git \
+            libattr1-dev \
+            libfuse3-dev \
+            liblz4-dev \
+            liblzma-dev \
+            liblzo2-dev \
+            libzstd-dev \
+            pkg-config \
+            tar \
+            zlib1g-dev
+
+      - name: Build reusable host tools bundle
+        if: steps.restore-host-tools.outputs.cache-hit != 'true'
+        run: bash scripts/ci/static/build-host-tools-bundle.sh
+
+      - name: Save host tools cache
+        if: steps.restore-host-tools.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .ci-cache/host-tools
+            .ci-out/host-tools
+          key: ${{ steps.restore-host-tools.outputs.cache-primary-key }}
+
+      - name: Pack host tools artifact
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p .ci-artifacts
+          tar -C .ci-out -czf ".ci-artifacts/${{ steps.meta.outputs.artifact-name }}.tar.gz" host-tools
+
+      - name: Upload host tools artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.artifact-name }}
+          path: .ci-artifacts/${{ steps.meta.outputs.artifact-name }}.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  build-and-test:
+    needs: build-host-tools
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: recursive
+
+      - name: Download host tools artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-host-tools.outputs.artifact-name }}
+          path: .ci-artifacts
+
+      - name: Unpack host tools
+        shell: bash
+        run: |
+          set -euxo pipefail
+          HOST_TOOLS_ROOT="$RUNNER_TEMP/ci-tools"
+          rm -rf "$HOST_TOOLS_ROOT"
+          mkdir -p "$HOST_TOOLS_ROOT"
+          tar -C "$HOST_TOOLS_ROOT" -xzf ".ci-artifacts/${{ needs.build-host-tools.outputs.artifact-name }}.tar.gz"
+          echo "HOST_TOOLS_DIR=$HOST_TOOLS_ROOT/host-tools" >> "$GITHUB_ENV"
+
+      - name: Install runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            inotify-tools \
+            squashfs-tools \
+            uidmap
+
+      - name: Write /etc/containers/containers.conf
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo mkdir -p /etc/containers
+          sudo tee /etc/containers/containers.conf >/dev/null <<EOF
+          [engine]
+          runtime = "crun"
+
+          [engine.runtimes]
+          crun = ["$HOST_TOOLS_DIR/bin/crun"]
+          EOF
+
+      - name: Allow unprivileged user namespaces
+        run: |
+          set -euxo pipefail
+
+          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns
+          fi
+
+          sysctl kernel.apparmor_restrict_unprivileged_userns 2>/dev/null || true
+          sysctl kernel.unprivileged_userns_clone 2>/dev/null || true
+          sysctl user.max_user_namespaces 2>/dev/null || true
+
+      - name: Check user namespaces availability
+        run: |
+          set -euxo pipefail
+          echo "== sysctls =="
+          cat /proc/sys/kernel/unprivileged_userns_clone 2>/dev/null || true
+          cat /proc/sys/user/max_user_namespaces 2>/dev/null || true
+
+          echo "== unshare probe =="
+          if unshare -Ur true 2>/dev/null; then
+            echo "unshare -Ur: OK (user namespaces usable)"
+          else
+            echo "unshare -Ur: FAIL (user namespaces not usable here)"
+          fi
+
+          echo "== kernel config hint =="
+          zgrep CONFIG_USER_NS /proc/config.gz 2>/dev/null || true
+          grep CONFIG_USER_NS "/boot/config-$(uname -r)" 2>/dev/null || true
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build binary in devcontainer
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ghcr.io/${{ github.repository_owner }}/parallax-devcontainer
+          cacheFrom: ghcr.io/${{ github.repository_owner }}/parallax-devcontainer
+          push: ${{ github.event_name == 'push' && 'always' || 'never' }}
+          runCmd: >-
+            bash -lc '
+            mkdir -p dist &&
+            export CGO_ENABLED=1 &&
+            export CC=gcc &&
+            export GOFLAGS="-buildvcs=false" &&
+            export GO_LDFLAGS="-linkmode external" &&
+            export CGO_LDFLAGS="-g -O2" &&
+            export GOOS=linux &&
+            export HOST_ARCH="$(go env GOHOSTARCH)" &&
+            export OUT="parallax" &&
+            export VERSION_LDFLAGS="-X parallax/common.Version=${{ github.ref_name }}
+            -X parallax/common.Commit=${{ github.sha }}
+            -X parallax/common.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" &&
+            go version &&
+            go mod download &&
+            GOARCH="$HOST_ARCH" go build -v
+            -ldflags "$GO_LDFLAGS $VERSION_LDFLAGS"
+            -o "dist/$OUT"
+            . &&
+            echo "Built binary: dist/$OUT"
+            '
+
+      - name: Copy binary to runner temp
+        shell: bash
+        run: |
+          set -euxo pipefail
+          install -Dm0755 "$GITHUB_WORKSPACE/dist/parallax" "$RUNNER_TEMP/parallax"
+          echo "PARALLAX_BINARY=$RUNNER_TEMP/parallax" >> "$GITHUB_ENV"
+
+      - name: Check host tools and binary
+        run: |
+          export PATH="$HOST_TOOLS_DIR/bin:$PATH"
+          export PODMAN_BINARY="$HOST_TOOLS_DIR/bin/podman"
+          export BATS_BINARY="$HOST_TOOLS_DIR/bats/bin/bats"
+
+          "$PODMAN_BINARY" version
+          "$BATS_BINARY" --version
+          "$PARALLAX_BINARY" --version
+
+      - name: Simple parallax test
+        run: |
+          export PATH="$HOST_TOOLS_DIR/bin:$PATH"
+          export PODMAN_BINARY="$HOST_TOOLS_DIR/bin/podman"
+          export MOUNT_PROGRAM_PATH="$HOST_TOOLS_DIR/bin/parallax-mount-program"
+          export PARALLAX_MP_UID="$(id -u)"
+          export PARALLAX_MP_GID="$(id -g)"
+          export PODMAN_ROOT="$(mktemp -d)"
+          export PODMAN_RUNROOT="$(mktemp -d)"
+          export RO_STORAGE="$(mktemp -d)"
+          export CLEAN_ROOT="$(mktemp -d)"
+          export MKSQUASHFS_PATH="$(command -v mksquashfs)"
+
+          "$PODMAN_BINARY" \
+            --root "$PODMAN_ROOT" \
+            --runroot "$PODMAN_RUNROOT" \
+            pull busybox:latest
+
+          "$PARALLAX_BINARY" \
+            --podmanRoot "$PODMAN_ROOT" \
+            --roStoragePath "$RO_STORAGE" \
+            --mksquashfsPath "$MKSQUASHFS_PATH" \
+            --log-level info \
+            --migrate \
+            --image busybox:latest
+
+          "$PODMAN_BINARY" \
+            --root "$CLEAN_ROOT" \
+            --runroot "$PODMAN_RUNROOT" \
+            --storage-opt additionalimagestore="$RO_STORAGE" \
+            --storage-opt mount_program="$MOUNT_PROGRAM_PATH" \
+            images
+
+          "$PODMAN_BINARY" \
+            --root "$CLEAN_ROOT" \
+            --runroot "$PODMAN_RUNROOT" \
+            --storage-opt additionalimagestore="$RO_STORAGE" \
+            --storage-opt mount_program="$MOUNT_PROGRAM_PATH" \
+            run --rm ${PODMAN_RUN_OPTIONS:-} busybox:latest echo ok
+
+          "$PODMAN_BINARY" \
+            --root "$PODMAN_ROOT" \
+            --runroot "$PODMAN_RUNROOT" \
+            --storage-opt mount_program="$MOUNT_PROGRAM_PATH" \
+            rmi --all
+
+          rm -rf "$PODMAN_ROOT" "$PODMAN_RUNROOT" "$CLEAN_ROOT"
+
+      - name: Run Bats tests
+        run: |
+          export PATH="$HOST_TOOLS_DIR/bin:$PATH"
+          export PODMAN_BINARY="$HOST_TOOLS_DIR/bin/podman"
+          export BATS_BINARY="$HOST_TOOLS_DIR/bats/bin/bats"
+          export MOUNT_PROGRAM_PATH="$HOST_TOOLS_DIR/bin/parallax-mount-program"
+          export PARALLAX_MP_UID="$(id -u)"
+          export PARALLAX_MP_GID="$(id -g)"
+
+          "$BATS_BINARY" tests

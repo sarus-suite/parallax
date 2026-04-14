@@ -54,6 +54,19 @@ verify_dependencies() {
     log "INFO" "All dependencies are available"
 }
 
+ensure_directory_exists() {
+    local dir_path="$1"
+
+    mkdir -p "$dir_path" || handle_error "Failed to create directory: $dir_path"
+}
+
+ensure_open_tmp_permissions() {
+    local dir_path="$1"
+
+    mkdir -p "$dir_path" || handle_error "Failed to create directory: $dir_path"
+    chmod 1777 "$dir_path" || handle_error "Failed to set permissions on directory: $dir_path"
+}
+
 
 
 
@@ -71,7 +84,10 @@ fi
 
 ## Defaults and validation
 LOG_LEVEL="${PARALLAX_MP_LOGLEVEL:-INFO}"  # Set log level or default to INFO
-LOG_FILE="${PARALLAX_MP_LOGFILE:-/tmp/parallax-${UID}/mount_program.log}" # Set log file
+TEMP_MOUNT_UID="${PARALLAX_MP_UID:-$UID}"
+TEMP_PARENT="/tmp/parallax-${TEMP_MOUNT_UID}"
+TEMP_MOUNT_ROOT="${PARALLAX_MP_TMPDIR:-$TEMP_PARENT/mount_program}"
+LOG_FILE="${PARALLAX_MP_LOGFILE:-$TEMP_PARENT/mount_program.log}" # Set log file
 
 : "${PARALLAX_MP_INOTIFYWAIT_CMD:=inotifywait}"
 : "${PARALLAX_MP_FUSE_OVERLAYFS_CMD:=fuse-overlayfs}"
@@ -112,6 +128,8 @@ DEPENDENCIES=(
 
 ## Ensure log file directory exists or create it if possible
 mkdir -p "$(dirname "$LOG_FILE")" || { echo "Error: Failed to create log directory" >&2; exit 1; }
+ensure_open_tmp_permissions "$TEMP_PARENT"
+ensure_open_tmp_permissions "$TEMP_MOUNT_ROOT"
 ## Ensure LOG_LEVEL is valid; default to INFO
 if [[ -z "${LOG_LEVELS[$LOG_LEVEL]}" ]]; then
     echo "Invalid log level '$LOG_LEVEL'. Defaulting to INFO." >&2
@@ -248,7 +266,7 @@ do_squash_mount() {
 
     # Here we only check if link is a symlink to the actual squash file, as this is what Parallax migration does
     if [ -h "$squash_file" ]; then
-        log "INFO" "Running (Mounting squash file\.): $SQUASHFUSE_CMD ${SQUASHFUSE_OPTS[*]}"
+        log "INFO" "Running (Mounting squash file.): $SQUASHFUSE_CMD ${SQUASHFUSE_OPTS[*]}"
         output=$("$SQUASHFUSE_CMD" "${SQUASHFUSE_OPTS[@]}" "$squash_file" "$target_dir" 2>&1)
         exit_code=$?
 
@@ -282,12 +300,72 @@ do_fuse_mount() {
  #   log "INFO" "Fuse-overlayfs mount successful"
 }
 
+create_temp_lowerdir_mountpoint() {
+    ensure_directory_exists "$TEMP_MOUNT_ROOT"
+
+    mktemp -d "$TEMP_MOUNT_ROOT/lowerdir.XXXXXX" \
+        || handle_error "Failed to create temporary lowerdir mountpoint in $TEMP_MOUNT_ROOT"
+}
+
+replace_lowerdir_target() {
+    local replacement_dir="$1"
+    shift
+
+    local rewritten_args=()
+    local arg
+    local lowerdir_value=""
+    local rewritten_lowerdir=""
+
+    for arg in "$@"; do
+        if [[ "$arg" == *"lowerdir="* ]]; then
+            lowerdir_value="${arg#*lowerdir=}"
+            lowerdir_value="${lowerdir_value%%,upperdir*}"
+            log "INFO" "Found lowerdir argument: $lowerdir_value"
+
+            rewritten_lowerdir="$replacement_dir"
+            if [[ "$lowerdir_value" == *:* ]]; then
+                rewritten_lowerdir="${lowerdir_value%:*}:$replacement_dir"
+            fi
+            log "INFO" "Replacing lowerdir with: $rewritten_lowerdir"
+
+            arg="${arg/lowerdir=$lowerdir_value/lowerdir=$rewritten_lowerdir}"
+        fi
+
+        rewritten_args+=("$arg")
+    done
+
+    if [ -z "$lowerdir_value" ]; then
+        handle_error "No lowerdir argument found while rewriting fuse-overlayfs arguments"
+    fi
+
+    printf '%s\n' "${rewritten_args[@]}"
+}
+
+cleanup_temp_lowerdir_mountpoint() {
+    local temp_lowerdir="$1"
+
+    if [ -z "$temp_lowerdir" ]; then
+        return 0
+    fi
+
+    if mountpoint -q "$temp_lowerdir"; then
+        log "INFO" "Attempt unmounting temporary lowerdir $temp_lowerdir"
+        unmount_with_retries "$temp_lowerdir"
+    fi
+
+    if [ -d "$temp_lowerdir" ]; then
+        rmdir "$temp_lowerdir" 2>/dev/null \
+            && log "INFO" "Removed temporary lowerdir $temp_lowerdir" \
+            || log "WARNING" "Could not remove temporary lowerdir $temp_lowerdir"
+    fi
+}
+
 #########################
 # Watcher unmount process
 #########################
 run_watcher() {
     local mount_dir="$1"
-    local squash_file="$2"
+    local temp_lowerdir="$2"
 
     # Validate inputs
     if [ ! -d "$mount_dir" ]; then
@@ -295,15 +373,15 @@ run_watcher() {
         return 1
     fi
 
-    if [ ! -e "$squash_file" ]; then
-        log "ERROR" "Squash file $squash_file does not exist"
+    if [ ! -d "$temp_lowerdir" ]; then
+        log "ERROR" "Temporary lowerdir $temp_lowerdir does not exist"
         return 1
     fi
 
-    log "INFO" "Starting squash watcher for: $squash_file and mount directory: $mount_dir"
+    log "INFO" "Starting squash watcher for temp lowerdir: $temp_lowerdir and mount directory: $mount_dir"
 
-    if [ ! -e "$squash_file" ]; then
-        log "INFO" "No squash file found, watcher not needed"
+    if [ ! -d "$temp_lowerdir" ]; then
+        log "INFO" "No temporary lowerdir found, watcher not needed"
         return
     fi
 
@@ -320,11 +398,7 @@ run_watcher() {
         log "ERROR" "inotifywait failed with exit code $exit_code: $output"
     fi
 
-    log "INFO" "Attempt unmounting $mount_dir"
-    unmount_with_retries "$mount_dir"
-
-    log "INFO" "Attempt unmounting $squash_file"
-    unmount_with_retries "$squash_file"
+    cleanup_temp_lowerdir_mountpoint "$temp_lowerdir"
 
     log "INFO" "Watcher DONE for $mount_dir"
 }
@@ -356,6 +430,8 @@ main() {
     # Extract lower directory and squash file
     LOWER_DIR=$(echo "$@" | sed 's/,upperdir.*//' | sed 's/.*lowerdir=//' | sed 's/.*://')
     MOUNT_DIR=$(echo "$@" | sed 's/.* //')
+    local TEMP_LOWER_DIR=""
+    local FUSE_MOUNT_ARGS=()
 
     # Squash check
     verify_file_exists "${LOWER_DIR}.squash"
@@ -365,17 +441,30 @@ main() {
       log "INFO" "Squashed container mount"
 
       verify_mount_point "$MOUNT_DIR"
+      TEMP_LOWER_DIR=$(create_temp_lowerdir_mountpoint)
 
       # Do the mounts
-      do_squash_mount "${LOWER_DIR}.squash" "$LOWER_DIR"
+      do_squash_mount "${LOWER_DIR}.squash" "$TEMP_LOWER_DIR"
 
-      #wait_for_mount_ready "${LOWER_DIR}" "opt/nvidia/nvidia_entrypoint.sh" || handle_error "squashfuse mount not ready: $LOWER_DIR"
-      wait_for_mount_ready "${LOWER_DIR}" || handle_error "squashfuse mount not ready: $LOWER_DIR"
+      #wait_for_mount_ready "${TEMP_LOWER_DIR}" "opt/nvidia/nvidia_entrypoint.sh" || handle_error "squashfuse mount not ready: $TEMP_LOWER_DIR"
+      wait_for_mount_ready "${TEMP_LOWER_DIR}" || {
+          cleanup_temp_lowerdir_mountpoint "$TEMP_LOWER_DIR"
+          handle_error "squashfuse mount not ready: $TEMP_LOWER_DIR"
+      }
 
-	  do_fuse_mount "$@"
+      mapfile -t FUSE_MOUNT_ARGS < <(replace_lowerdir_target "$TEMP_LOWER_DIR" "$@")
+
+	  do_fuse_mount "${FUSE_MOUNT_ARGS[@]}"
+      if [ $? -ne 0 ]; then
+          cleanup_temp_lowerdir_mountpoint "$TEMP_LOWER_DIR"
+          handle_error "Fuse-overlayfs mount failed"
+      fi
 
       #wait_for_mount_ready "$MOUNT_DIR" "opt/nvidia/nvidia_entrypoint.sh" || handle_error "overlay mount not ready: $MOUNT_DIR"
-      wait_for_mount_ready "$MOUNT_DIR" || handle_error "overlay mount not ready: $MOUNT_DIR"
+      wait_for_mount_ready "$MOUNT_DIR" || {
+          cleanup_temp_lowerdir_mountpoint "$TEMP_LOWER_DIR"
+          handle_error "overlay mount not ready: $MOUNT_DIR"
+      }
 
       # Permission reset
       run_and_log "Updating permissions for $MOUNT_DIR" chmod a+rx "$MOUNT_DIR"
@@ -384,7 +473,7 @@ main() {
       # Watcher as background process to unmount
       # "0<&-" drop stdin
       # "&>/dev/null" discard output
-      run_watcher "$MOUNT_DIR" "${LOWER_DIR}" 0<&- &>/dev/null &
+      run_watcher "$MOUNT_DIR" "$TEMP_LOWER_DIR" 0<&- &>/dev/null &
       watcher_pid=$!
       log "INFO" "Watcher process started with PID: $watcher_pid"
     else
