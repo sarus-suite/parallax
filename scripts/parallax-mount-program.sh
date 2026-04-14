@@ -398,9 +398,6 @@ run_watcher() {
         log "ERROR" "inotifywait failed with exit code $exit_code: $output"
     fi
 
-    log "INFO" "Attempt unmounting $mount_dir"
-    unmount_with_retries "$mount_dir"
-
     cleanup_temp_lowerdir_mountpoint "$temp_lowerdir"
 
     log "INFO" "Watcher DONE for $mount_dir"
