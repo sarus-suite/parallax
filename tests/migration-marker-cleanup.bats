@@ -28,6 +28,13 @@ run test -f "$marker_path"
 assert_success
 
 run \
+	"$PODMAN_BINARY" \
+		--root "$PODMAN_ROOT" \
+		--runroot "$PODMAN_RUNROOT" \
+		rmi busybox:latest
+assert_success
+
+run \
 	"$PARALLAX_BINARY" \
 		--podmanRoot "$CLEAN_ROOT" \
 		--roStoragePath "$RO_STORAGE" \
