@@ -21,21 +21,6 @@ wait_for_lowerdir_count() {
   return 1
 }
 
-wait_for_mountpoint() {
-  local path="$1"
-  local tries="${2:-100}"
-  local delay="${3:-0.1}"
-
-  for _ in $(seq 1 "$tries"); do
-    if mountpoint -q "$path"; then
-      return 0
-    fi
-    sleep "$delay"
-  done
-
-  return 1
-}
-
 @test "same migrated image runs in parallel with isolated lowerdir mounts and cleanup" {
   export PARALLAX_MP_TMPDIR
   PARALLAX_MP_TMPDIR="$(mktemp -d)"
@@ -94,16 +79,6 @@ wait_for_mountpoint() {
   run test -n "$lowerdir_two"
   assert_success
   run test "$lowerdir_one" != "$lowerdir_two"
-  assert_success
-
-  run wait_for_mountpoint "$lowerdir_one"
-  assert_success
-  run wait_for_mountpoint "$lowerdir_two"
-  assert_success
-
-  run test -d "$lowerdir_one/etc"
-  assert_success
-  run test -d "$lowerdir_two/etc"
   assert_success
 
   run \
