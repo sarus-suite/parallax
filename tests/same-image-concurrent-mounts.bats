@@ -21,7 +21,7 @@ wait_for_lowerdir_count() {
   return 1
 }
 
-@test "same migrated image runs in parallel with isolated lowerdir mounts and cleanup" {
+@test "lowerdir checks. Same migrated image runs in parallel with isolated lowerdir mounts and cleanup" {
   export PARALLAX_MP_TMPDIR
   PARALLAX_MP_TMPDIR="$(mktemp -d)"
 
