@@ -31,10 +31,10 @@ teardown() {
     sed 's/^/# mp: /' "$PARALLAX_MP_LOGFILE" >&3 || true
   fi
 
-  "${PODMAN_BINARY}" unshare chmod -R u+rwX "${PODMAN_ROOT}" 2>/dev/null || true
-  "${PODMAN_BINARY}" unshare chmod -R u+rwX "${PODMAN_RUNROOT}" 2>/dev/null || true
-  "${PODMAN_BINARY}" unshare chmod -R u+rwX "${RO_STORAGE}" 2>/dev/null || true
-  "${PODMAN_BINARY}" unshare chmod -R u+rwX "${CLEAN_ROOT}" 2>/dev/null || true
+#  "${PODMAN_BINARY}" unshare chmod -R u+rwX "${PODMAN_ROOT}" 2>/dev/null || true
+#  "${PODMAN_BINARY}" unshare chmod -R u+rwX "${PODMAN_RUNROOT}" 2>/dev/null || true
+#  "${PODMAN_BINARY}" unshare chmod -R u+rwX "${RO_STORAGE}" 2>/dev/null || true
+#  "${PODMAN_BINARY}" unshare chmod -R u+rwX "${CLEAN_ROOT}" 2>/dev/null || true
 
   # Podman to teardown the temporal dirs and resolve file permissions
   "$PODMAN_BINARY" \
