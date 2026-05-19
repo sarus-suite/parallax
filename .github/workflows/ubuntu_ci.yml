@@ -1,4 +1,4 @@
-name: Ubuntu amd64 pipeline
+name: Ubuntu amd64 and arm64 pipeline
 
 on:
   push:
@@ -13,7 +13,15 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GITHUB_REPOSITORY: ${{ github.repository }}
@@ -49,54 +57,64 @@ jobs:
           go-version: '1.24.0'
           check-latest: true
 
-            #      - name: Dump GO env
-            #        run: |
-            #          echo "--- all GO* vars ---"
-            #          env | grep '^GO' || true
-            #          echo "--- go env ---"
-            #          go env
-
       - name: Install go deps
-        run: go get ./...
+        run: go mod download
 
-      - name: Build Linux binaries (with Ubuntu version)
+      - name: Detect Ubuntu version
+        id: ubuntu_version
+        run: echo "ver=$(lsb_release -rs)" >> "$GITHUB_OUTPUT"
+
+      - name: Build Linux binary ${{ matrix.arch }} (with Ubuntu version)
         env:
           CGO_ENABLED: "1"
           CC: gcc
+          GOARCH: ${{ matrix.arch }}
           GOOS: linux
           GOFLAGS: "-buildvcs=false"
           GO_LDFLAGS: "-linkmode external"
           CGO_LDFLAGS: "-g -O2"
         run: |
-          # version for tag
-          VER="$(lsb_release -rs)"
           mkdir -p dist
-          HOST_ARCH=$(go env GOHOSTARCH)
-          OUT="parallax-${{ github.ref_name }}-ubuntu-${VER}-${HOST_ARCH}"
+          OUT="parallax-${{ github.ref_name }}-ubuntu-${{ steps.ubuntu_version.outputs.ver }}-${{ matrix.arch }}"
           echo "Building $OUT"
-          GOARCH=$HOST_ARCH go build -v -x \
+          go build -v -x \
               -ldflags "-X 'github.com/sarus-suite/parallax/version.Version=${{ github.ref_name }}'" \
               -o dist/$OUT \
               .
 
       - name: Inspect binary
         run: |
-          VER="$(lsb_release -rs)"
-          HOST_ARCH=$(go env GOHOSTARCH)
-          OUT="parallax-${{ github.ref_name }}-ubuntu-${VER}-${HOST_ARCH}"
+          OUT="parallax-${{ github.ref_name }}-ubuntu-${{ steps.ubuntu_version.outputs.ver }}-${{ matrix.arch }}"
           file dist/$OUT
           readelf -l dist/$OUT | grep interpreter || true
           ldd dist/$OUT || echo "static :/"
 
-      - name: Create or Update GitHub Release and Upload Asset
+      - name: Upload release asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-binary-${{ matrix.arch }}
+          path: dist/parallax-${{ github.ref_name }}-ubuntu-${{ steps.ubuntu_version.outputs.ver }}-${{ matrix.arch }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download built assets
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ubuntu-binary-*
+          merge-multiple: true
+          path: dist
+
+      - name: Create or Update GitHub Release and Upload Assets
         uses: ncipollo/release-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          artifacts: dist/parallax-${{ github.ref_name }}-ubuntu-*-*
+          artifacts: dist/*
           allowUpdates: true
-          replacesArtifacts: false
+          replacesArtifacts: true
           draft: false
           prerelease: false
-
