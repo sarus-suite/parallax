@@ -9,5 +9,5 @@
 *.log
 
 /bin/
+/dist/
 /pkg/
-

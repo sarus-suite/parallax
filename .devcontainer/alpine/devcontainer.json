@@ -1,13 +1,19 @@
 {
-  "name": "Parallax Ubuntu",
+  "name": "Parallax Alpine",
   "build": {
     "dockerfile": "Dockerfile",
+    "context": "..",
     "args": {
       "GO_VERSION": "1.24.0"
     }
   },
+  "remoteEnv": {
+    "CGO_ENABLED": "1",
+    "GOOS": "linux",
+    "GOFLAGS": "-buildvcs=false"
+  },
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-  "postCreateCommand": "./.devcontainer/scripts/post-create.sh",
+  "postCreateCommand": "sh ./.devcontainer/alpine/post-create.sh",
   "customizations": {
     "vscode": {
       "extensions": [

@@ -1,7 +1,8 @@
 {
-  "name": "Parallax Ubuntu",
+  "name": "Parallax openSUSE",
   "build": {
     "dockerfile": "Dockerfile",
+    "context": "..",
     "args": {
       "GO_VERSION": "1.24.0"
     }
