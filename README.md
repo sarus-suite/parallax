@@ -42,8 +42,9 @@ rsync
 ### 1. Build
 ~~~
     go mod tidy
-    go build -o parallax
+    sh ./.devcontainer/scripts/build-static.sh
 ~~~
+This produces a fully static Linux binary at `dist/parallax-static` using the Alpine devcontainer toolchain.
 
 ### 2. Pull an image
 ~~~
@@ -152,10 +153,7 @@ Use the provided script [`scripts/parallax-mount-program.sh`](scripts/parallax-m
 6. **Rootless only**
    Parallax has been tested only in a rootless Podman (user-namespace) setup. Running as root is untested and may require extra privileges.
 
-7. **Dynamic Linking Requirement**
-    Parallax relies on the containers/storage Go library in rootless mode, which depends on accessing the unshare system capability for user-namespace operations. This functionality is only available when the Parallax binary is dynamically linked (i.e., not statically compiled). Static binaries will produce start-up errors.
-
-8. **FUSE3 and fusermount3 required**
+7. **FUSE3 and fusermount3 required**
    Parallax is built against FUSE3 and expects `fusermount3`. If you use a `fusermount` version < 3.0, you will see errors like:
 ~~~
   ERROR: Mounting squash file. failed: fuse: mountpoint is not empty

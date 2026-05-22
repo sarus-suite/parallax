@@ -182,40 +182,43 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build binary in devcontainer
+      - name: Build static binary in Alpine devcontainer
         uses: devcontainers/ci@v0.3
         with:
-          imageName: ghcr.io/${{ github.repository_owner }}/parallax-devcontainer
-          cacheFrom: ghcr.io/${{ github.repository_owner }}/parallax-devcontainer
+          configFile: .devcontainer/alpine/devcontainer.json
+          imageName: ghcr.io/${{ github.repository_owner }}/parallax-devcontainer-alpine
+          cacheFrom: ghcr.io/${{ github.repository_owner }}/parallax-devcontainer-alpine
           push: ${{ github.event_name == 'push' && 'always' || 'never' }}
           runCmd: >-
             bash -lc '
             mkdir -p dist &&
-            export CGO_ENABLED=1 &&
-            export CC=gcc &&
-            export GOFLAGS="-buildvcs=false" &&
-            export GO_LDFLAGS="-linkmode external" &&
-            export CGO_LDFLAGS="-g -O2" &&
-            export GOOS=linux &&
-            export HOST_ARCH="$(go env GOHOSTARCH)" &&
-            export OUT="parallax" &&
+            export OUT="dist/parallax-static" &&
             export VERSION_LDFLAGS="-X parallax/common.Version=${{ github.ref_name }}
             -X parallax/common.Commit=${{ github.sha }}
             -X parallax/common.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" &&
             go version &&
             go mod download &&
-            GOARCH="$HOST_ARCH" go build -v
-            -ldflags "$GO_LDFLAGS $VERSION_LDFLAGS"
-            -o "dist/$OUT"
-            . &&
-            echo "Built binary: dist/$OUT"
+            sh ./.devcontainer/scripts/build-static.sh &&
+            echo "Built binary: $OUT"
             '
+
+      - name: Verify static binary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          file "$GITHUB_WORKSPACE/dist/parallax-static"
+          if readelf -l "$GITHUB_WORKSPACE/dist/parallax-static" | grep -q 'Requesting program interpreter'; then
+            echo "binary is dynamically linked"
+            exit 1
+          fi
+          scanelf -n "$GITHUB_WORKSPACE/dist/parallax-static" || true
+          ldd "$GITHUB_WORKSPACE/dist/parallax-static" || true
 
       - name: Copy binary to runner temp
         shell: bash
         run: |
           set -euxo pipefail
-          install -Dm0755 "$GITHUB_WORKSPACE/dist/parallax" "$RUNNER_TEMP/parallax"
+          install -Dm0755 "$GITHUB_WORKSPACE/dist/parallax-static" "$RUNNER_TEMP/parallax"
           echo "PARALLAX_BINARY=$RUNNER_TEMP/parallax" >> "$GITHUB_ENV"
 
       - name: Check host tools and binary
