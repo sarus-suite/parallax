@@ -289,3 +289,11 @@ jobs:
           export PARALLAX_MP_GID="$(id -g)"
 
           "$BATS_BINARY" tests
+
+      - name: Upload tested static binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: parallax-static-${{ github.sha }}
+          path: dist/parallax-static
+          if-no-files-found: error
+          retention-days: 7
