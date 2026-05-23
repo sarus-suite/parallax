@@ -13,6 +13,7 @@ RUN apk add --no-cache \
         curl \
         file \
         fuse-overlayfs \
+        fuse3-dev \
         git \
         inotify-tools \
         libassuan-dev \
@@ -20,7 +21,9 @@ RUN apk add --no-cache \
         libselinux-dev \
         linux-headers \
         lvm2-dev \
+        meson \
         musl-dev \
+        ninja \
         pax-utils \
         podman \
         protobuf-c-dev \
@@ -32,6 +35,8 @@ RUN apk add --no-cache \
         squashfs-tools \
         squashfuse \
         tar \
+        zlib-dev \
+        zstd-dev \
         gpgme-dev
 
 COPY scripts/install-go.sh /tmp/install-go.sh

@@ -25,18 +25,24 @@ func RunMigration(cfg common.Config) (*storage.Image, error) {
 	log = log.WithField("sub", "migration")
 	log.Infof("Starting migration for image: %s", cfg.Image)
 	log.Debugf("Podman Root: %s, Read-only Storage Path: %s, mksquashfs Path: %s",
-	cfg.PodmanRoot, cfg.RoStoragePath, cfg.MksquashfsPath)
+		cfg.PodmanRoot, cfg.RoStoragePath, cfg.MksquashfsPath)
 
 	name := cfg.Image
 	_, names, err := resolveImageNames(name)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 
 	srcStore, cleanupSrcStore, err := setupSrcStore(cfg)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	defer cleanupSrcStore()
 
 	scratchStore, cleanupScratch, err := setupScratchStore(&cfg)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	defer cleanupScratch()
 
 	migrated, err := checkIfMigrated(name, cfg, scratchStore)
@@ -46,35 +52,50 @@ func RunMigration(cfg common.Config) (*storage.Image, error) {
 	}
 
 	srcImg, mountPoint, cleanupSrc, err := prepareAndMountSourceImage(name, cfg, srcStore)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	defer cleanupSrc()
 
 	layerDigest, size, dummyDir, cleanupDummy, err := createDummyFlatLayer(name, srcImg)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	defer cleanupDummy()
 
 	newLayer, err := putFlattenedLayer(scratchStore, dummyDir, layerDigest, size)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 
 	overlayLink, err := readOverlayLink(newLayer, cfg)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 
 	err = createSquashSidecarFromMount(mountPoint, overlayLink, cfg)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 
 	cfgBlob, manifestBlob, manifestDigest, err := generateManifestAndConfig(srcImg, layerDigest, size, cfg, srcStore)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 
 	flatImg, err := createFlattenedImageInStore(scratchStore, names, newLayer, srcImg, manifestDigest)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 
 	err = attachMetadataToImage(scratchStore, flatImg, cfgBlob, manifestBlob, srcImg, cfg, srcStore)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 
 	log.Infof("Migration successfully completed for image: %s", flatImg.ID)
 	return flatImg, nil
 }
-
 
 func resolveImageNames(name string) (string, []string, error) {
 	sublog := log.WithField("fn", "resolveImageNames")
@@ -145,7 +166,7 @@ func makeDummyDir(imageName, imageID string) (string, func(), error) {
 	}
 
 	sanitized_name := safeName(imageName)
-	marker := filepath.Join(dir, ".migrationv3-" + sanitized_name)
+	marker := filepath.Join(dir, ".migrationv3-"+sanitized_name)
 	if err := os.WriteFile(marker, []byte(imageID+"\n"), 0o644); err != nil {
 		cleanup()
 		return "", nil, err
@@ -167,8 +188,8 @@ func FlattenViaTar(mountPoint, layerID string) (godigest.Digest, int64, error) {
 	defer diff.Close()
 
 	digester := godigest.Canonical.Digester()
-	counter  := ioutils.NewWriteCounter(digester.Hash())
-	tr       := tar.NewReader(io.TeeReader(diff, counter))
+	counter := ioutils.NewWriteCounter(digester.Hash())
+	tr := tar.NewReader(io.TeeReader(diff, counter))
 
 	// Walk the tar
 	for {
@@ -215,7 +236,7 @@ func setupScratchStore(cfg *common.Config) (storage.Store, func(), error) {
 	// we copy mirror the RoStoragePath to hide the fact that might be a networkedFS
 	mirror, mirrorCleanup, err := common.Mirror(cfg.RoStoragePath)
 	if err != nil {
-		sublog.Debug("Failed to copy mirror: %v", err)
+		sublog.Debugf("Failed to copy mirror: %v", err)
 		return nil, nil, err
 	}
 	sublog.Infof("Copy mirror of %s at %s", cfg.RoStoragePath, mirror)
@@ -274,7 +295,7 @@ func checkIfMigrated(name string, cfg common.Config, roStore storage.Store) (boo
 
 	sublog.Debug("Checking for migration symlinks")
 	lSidecar := filepath.Join(cfg.RoStoragePath, "overlay", "l", link+".squash")
-	squash    := filepath.Join(cfg.RoStoragePath, "squash",      link+".squash")
+	squash := filepath.Join(cfg.RoStoragePath, "squash", link+".squash")
 	if _, err := os.Stat(lSidecar); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return false, nil
@@ -333,12 +354,12 @@ func createSquashSidecarFromMount(srcDir, link string, cfg common.Config) error 
 	if _, err := os.Stat(squashPath); errors.Is(err, os.ErrNotExist) {
 
 		// Choose default or user provided flags
-		defaultFlags := []string {
+		defaultFlags := []string{
 			"-noappend",
 			"-comp", "zstd",
 			"-Xcompression-level", "1",
 			"-noD", "-no-xattrs",
-			"-e", "security.capability", 
+			"-e", "security.capability",
 		}
 		flags := defaultFlags
 		if len(cfg.MksquashfsOpts) > 0 {
@@ -355,15 +376,21 @@ func createSquashSidecarFromMount(srcDir, link string, cfg common.Config) error 
 
 	sublog.Info("Symlinking squash")
 	lDir := filepath.Join(cfg.RoStoragePath, "overlay", "l")
-	if err := os.MkdirAll(lDir, 0o755); err != nil { return err }
+	if err := os.MkdirAll(lDir, 0o755); err != nil {
+		return err
+	}
 
-	return ensureSymlink( filepath.Join("..", "..", "squash", link+".squash"), filepath.Join(lDir, link+".squash"))
+	return ensureSymlink(filepath.Join("..", "..", "squash", link+".squash"), filepath.Join(lDir, link+".squash"))
 }
 
 func ensureSymlink(target, linkname string) error {
 	_, err := os.Lstat(linkname)
-	if err == nil { return nil }
-	if !errors.Is(err, os.ErrNotExist) { return err }
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
 	return os.Symlink(target, linkname)
 }
 
@@ -406,7 +433,7 @@ func generateManifestAndConfig(srcImg *storage.Image, layerDigest godigest.Diges
 
 	sublog.Debug("Creating new manifest")
 	manifest := ocispec.Manifest{
-		MediaType: "application/vnd.oci.image.manifest.v1+json",
+		MediaType:   "application/vnd.oci.image.manifest.v1+json",
 		Annotations: originalManifest.Annotations,
 		Config: ocispec.Descriptor{
 			MediaType: ocispec.MediaTypeImageConfig,
@@ -430,10 +457,10 @@ func generateManifestAndConfig(srcImg *storage.Image, layerDigest godigest.Diges
 
 func createFlattenedImageInStore(store storage.Store, names []string, layer *storage.Layer, srcImg *storage.Image, manifestDigest godigest.Digest) (*storage.Image, error) {
 	flatImg, err := store.CreateImage(
-		"",        // The store automagically assign a new ID to image object
-		names,     // We pass the name and full name too!
-		layer.ID,  // We pass the new dummy layer id
-		"",        // Not using srcImg.Metadata as it can add inconsistent info after migration
+		"",       // The store automagically assign a new ID to image object
+		names,    // We pass the name and full name too!
+		layer.ID, // We pass the new dummy layer id
+		"",       // Not using srcImg.Metadata as it can add inconsistent info after migration
 		&storage.ImageOptions{
 			NamesHistory: srcImg.Names,
 			CreationDate: srcImg.Created,
@@ -474,7 +501,7 @@ func attachMetadataToImage(store storage.Store, img *storage.Image, cfgBlob, man
 	sublog.Debug("Attaching all other BigData from srcImage")
 	for _, bdname := range srcImg.BigDataNames {
 		if bdname == cfgDigest.String() ||
-		strings.HasPrefix(bdname, storage.ImageDigestManifestBigDataNamePrefix){
+			strings.HasPrefix(bdname, storage.ImageDigestManifestBigDataNamePrefix) {
 			continue // skip manifest and config
 		}
 
@@ -492,4 +519,3 @@ func attachMetadataToImage(store storage.Store, img *storage.Image, cfgBlob, man
 
 	return nil
 }
-

@@ -1,4 +1,4 @@
-FROM opensuse/leap:15.6
+FROM opensuse/leap:15.5
 
 ARG GO_VERSION=1.24.0
 
@@ -6,9 +6,11 @@ RUN zypper --non-interactive refresh && \
     zypper --non-interactive update -y && \
     zypper --non-interactive install -y \
         bats \
+        binutils \
         btrfsprogs \
         curl \
         device-mapper-devel \
+        file \
         fuse-overlayfs \
         fuse3 \
         gcc \
