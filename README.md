@@ -52,6 +52,12 @@ To build a static `inotifywait` binary from source inside the Alpine devcontaine
 ~~~
 This produces `dist/inotifywait-static`.
 
+To build a static `mksquashfs` binary from source inside the Alpine devcontainer:
+~~~
+    sh ./.devcontainer/scripts/build-mksquashfs-static.sh
+~~~
+This produces `dist/squashfs-tools-static/mksquashfs`.
+
 ### 2. Pull an image
 ~~~
     podman \
