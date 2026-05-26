@@ -46,29 +46,17 @@ rsync
 ~~~
 This produces a fully static Linux binary at `dist/parallax-static` using the Alpine devcontainer toolchain.
 
-To build a static `inotifywait` binary from source inside the Alpine devcontainer:
-~~~
-    sh ./.devcontainer/scripts/build-inotifywait-static.sh
-~~~
-This produces `dist/inotifywait-static`.
+Static helper build scripts:
 
-To build a static `mksquashfs` binary from source inside the Alpine devcontainer:
-~~~
-    sh ./.devcontainer/scripts/build-mksquashfs-static.sh
-~~~
-This produces `dist/squashfs-tools-static/mksquashfs`.
+* `sh ./.devcontainer/scripts/build-inotifywait-static.sh` -> `dist/inotifywait-static`
+* `sh ./.devcontainer/scripts/build-mksquashfs-static.sh` -> `dist/squashfs-tools-static/mksquashfs`
+* `sh ./.devcontainer/scripts/build-squashfuse-ll-static.sh` -> `dist/squashfuse-static/squashfuse_ll`
+* `sh ./.devcontainer/scripts/build-fusermount3-static.sh` -> `dist/fusermount3-static/fusermount3`
 
-To build a static `squashfuse_ll` binary from source inside the Alpine devcontainer:
-~~~
-    sh ./.devcontainer/scripts/build-squashfuse-ll-static.sh
-~~~
-This produces `dist/squashfuse-static/squashfuse_ll`.
+Smoke test:
 
-To smoke test the built `squashfuse_ll` inside the Alpine devcontainer:
-~~~
-    sh ./.devcontainer/scripts/smoke-test-squashfuse-ll.sh
-~~~
-This creates a tiny zstd-compressed squashfs image, mounts it with `dist/squashfuse-static/squashfuse_ll`, verifies a file read, and unmounts it with `fusermount3`.
+* `sh ./.devcontainer/scripts/smoke-test-squashfuse-ll.sh`
+* `sh ./.devcontainer/scripts/smoke-test-fusermount3.sh`
 
 ### 2. Pull an image
 ~~~

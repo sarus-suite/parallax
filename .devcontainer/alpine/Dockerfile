@@ -44,6 +44,7 @@ RUN apk add --no-cache \
         zlib-dev \
         zstd-dev \
         libtool \
+        meson \
         gpgme-dev \
         xz-dev \
         xz-static \
