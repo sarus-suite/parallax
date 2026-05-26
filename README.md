@@ -49,6 +49,7 @@ This produces a fully static Linux binary at `dist/parallax-static` using the Al
 Static helper build scripts:
 
 * `sh ./.devcontainer/scripts/build-inotifywait-static.sh` -> `dist/inotifywait-static`
+* `sh ./.devcontainer/scripts/build-fuse-overlayfs-static.sh` -> `dist/fuse-overlayfs-static/fuse-overlayfs`
 * `sh ./.devcontainer/scripts/build-mksquashfs-static.sh` -> `dist/squashfs-tools-static/mksquashfs`
 * `sh ./.devcontainer/scripts/build-squashfuse-ll-static.sh` -> `dist/squashfuse-static/squashfuse_ll`
 * `sh ./.devcontainer/scripts/build-fusermount3-static.sh` -> `dist/fusermount3-static/fusermount3`

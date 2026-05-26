@@ -12,6 +12,7 @@ RUN apk add --no-cache \
         btrfs-progs-dev \
         build-base \
         ca-certificates \
+        cargo \
         curl \
         file \
         fuse-overlayfs \
@@ -36,6 +37,7 @@ RUN apk add --no-cache \
         protobuf-dev \
         pkgconf \
         rsync \
+        rust \
         shadow-uidmap \
         slirp4netns \
         squashfs-tools \
