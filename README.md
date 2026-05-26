@@ -46,6 +46,12 @@ rsync
 ~~~
 This produces a fully static Linux binary at `dist/parallax-static` using the Alpine devcontainer toolchain.
 
+To build a static `inotifywait` binary from source inside the Alpine devcontainer:
+~~~
+    sh ./.devcontainer/scripts/build-inotifywait-static.sh
+~~~
+This produces `dist/inotifywait-static`.
+
 ### 2. Pull an image
 ~~~
     podman \

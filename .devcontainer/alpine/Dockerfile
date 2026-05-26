@@ -3,6 +3,8 @@ FROM alpine:3.22
 ARG GO_VERSION=1.24.0
 
 RUN apk add --no-cache \
+        autoconf \
+        automake \
         bash \
         bats \
         binutils \
@@ -37,6 +39,7 @@ RUN apk add --no-cache \
         tar \
         zlib-dev \
         zstd-dev \
+        libtool \
         gpgme-dev
 
 COPY scripts/install-go.sh /tmp/install-go.sh
