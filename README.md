@@ -58,6 +58,18 @@ To build a static `mksquashfs` binary from source inside the Alpine devcontainer
 ~~~
 This produces `dist/squashfs-tools-static/mksquashfs`.
 
+To build a static `squashfuse_ll` binary from source inside the Alpine devcontainer:
+~~~
+    sh ./.devcontainer/scripts/build-squashfuse-ll-static.sh
+~~~
+This produces `dist/squashfuse-static/squashfuse_ll`.
+
+To smoke test the built `squashfuse_ll` inside the Alpine devcontainer:
+~~~
+    sh ./.devcontainer/scripts/smoke-test-squashfuse-ll.sh
+~~~
+This creates a tiny zstd-compressed squashfs image, mounts it with `dist/squashfuse-static/squashfuse_ll`, verifies a file read, and unmounts it with `fusermount3`.
+
 ### 2. Pull an image
 ~~~
     podman \

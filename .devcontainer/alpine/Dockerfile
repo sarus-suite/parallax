@@ -16,6 +16,7 @@ RUN apk add --no-cache \
         file \
         fuse-overlayfs \
         fuse3-dev \
+        fuse3-static \
         git \
         inotify-tools \
         libassuan-dev \
