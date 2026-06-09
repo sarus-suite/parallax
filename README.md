@@ -21,6 +21,7 @@ Parallax leverages existing container libraries for image handling, and a lightw
     * Podman’s overlay driver invokes Parallax mount program instead of the overlay driver default.
     * Parallax mount program transparently mounts and overlays the SquashFS layer for your container, then it automatically unmounts when the container exits.
 * Easy management. Listing and removing image data from the store.
+    * Checks whether a migrated image exists in the shared store.
     * Finds the migrated image in the store.
     * Deletes the SquashFS side-car files.
     * Removes the image record from the store.
@@ -93,6 +94,15 @@ Note: using `--storage-opt` cli option makes podman ignore the default storage c
         --image docker.io/library/hello-world:linux
 ~~~
 
+### 7. Check whether an image exists in the parallax store
+~~~
+    parallax \
+        --roStoragePath "/path/to/your/nfs/parallax/store" \
+        --log-level info \
+        --exist \
+        --image docker.io/library/hello-world:linux
+~~~
+
 
 ## Requirements
 * Go 1.22+
@@ -153,4 +163,3 @@ fuse: if you are sure this is safe, use the 'nonempty' mount option
   ERROR: squashfuse failed
 ~~~
 Please upgrade to FUSE3 (and ensure `fusermount` symlinks to `fusermount3`) to avoid this issue.
-

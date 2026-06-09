@@ -48,6 +48,15 @@ rmi_image() {
     --image "$ref"
 }
 
+exist_image() {
+  local ref="$1"
+  "$PARALLAX_BINARY" \
+    --roStoragePath "$RO_STORAGE" \
+    --log-level info \
+    --exist \
+    --image "$ref"
+}
+
 list_squash_files() {
   ls "$RO_STORAGE"/overlay/**/*.squash
 }
@@ -90,12 +99,20 @@ cleanup_registries_conf() {
   assert_success
   assert_output --regexp 'Migration successfully completed|Nothing to do\.'
 
+  run exist_image "alpine"
+  assert_success
+  assert_output --regexp 'exists in read-only storage'
+
   run run_image "alpine"
   assert_success
   assert_output "ok"
 
   run rmi_image "alpine"
   assert_success
+
+  run exist_image "alpine"
+  assert_failure
+  assert_output --regexp 'does not exist in read-only storage'
 
   run list_squash_files
   assert_failure
@@ -113,12 +130,20 @@ cleanup_registries_conf() {
   assert_success
   assert_output --regexp 'Migration successfully completed|Nothing to do\.'
 
+  run exist_image "alpine:latest"
+  assert_success
+  assert_output --regexp 'exists in read-only storage'
+
   run run_image "alpine:latest"
   assert_success
   assert_output "ok"
 
   run rmi_image "alpine:latest"
   assert_success
+
+  run exist_image "alpine:latest"
+  assert_failure
+  assert_output --regexp 'does not exist in read-only storage'
 
   run list_squash_files
   assert_failure
@@ -136,12 +161,20 @@ cleanup_registries_conf() {
   assert_success
   assert_output --regexp 'Migration successfully completed|Nothing to do\.'
 
+  run exist_image "alpine:3.22.1"
+  assert_success
+  assert_output --regexp 'exists in read-only storage'
+
   run run_image "alpine:3.22.1"
   assert_success
   assert_output "ok"
 
   run rmi_image "alpine:3.22.1"
   assert_success
+
+  run exist_image "alpine:3.22.1"
+  assert_failure
+  assert_output --regexp 'does not exist in read-only storage'
 
   run list_squash_files
   assert_failure
@@ -160,12 +193,20 @@ cleanup_registries_conf() {
   assert_success
   assert_output --regexp 'Migration successfully completed|Nothing to do\.'
 
+  run exist_image "docker.io/library/alpine"
+  assert_success
+  assert_output --regexp 'exists in read-only storage'
+
   run run_image "docker.io/library/alpine"
   assert_success
   assert_output "ok"
 
   run rmi_image "docker.io/library/alpine"
   assert_success
+
+  run exist_image "docker.io/library/alpine"
+  assert_failure
+  assert_output --regexp 'does not exist in read-only storage'
 
   run list_squash_files
   assert_failure
@@ -183,12 +224,20 @@ cleanup_registries_conf() {
   assert_success
   assert_output --regexp 'Migration successfully completed|Nothing to do\.'
 
+  run exist_image "docker.io/library/alpine:3.22.1"
+  assert_success
+  assert_output --regexp 'exists in read-only storage'
+
   run run_image "docker.io/library/alpine:3.22.1"
   assert_success
   assert_output "ok"
 
   run rmi_image "docker.io/library/alpine:3.22.1"
   assert_success
+
+  run exist_image "docker.io/library/alpine:3.22.1"
+  assert_failure
+  assert_output --regexp 'does not exist in read-only storage'
 
   run list_squash_files
   assert_failure
@@ -224,12 +273,20 @@ EOF
   assert_success
   assert_output --regexp 'Migration successfully completed|Nothing to do\.'
 
+  run exist_image "$newref"
+  assert_success
+  assert_output --regexp 'exists in read-only storage'
+
   run run_image "$newref"
   assert_success
   assert_output "ok"
 
   run rmi_image "$newref"
   assert_success
+
+  run exist_image "$newref"
+  assert_failure
+  assert_output --regexp 'does not exist in read-only storage'
 
   run list_squash_files
   assert_failure

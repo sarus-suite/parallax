@@ -2,13 +2,13 @@ package main
 
 import (
 	"flag"
-	"os"
 	"fmt"
+	"os"
 	"time"
 
-	"github.com/sirupsen/logrus"
-	"github.com/containers/storage/pkg/unshare"
 	"github.com/containers/storage/pkg/reexec"
+	"github.com/containers/storage/pkg/unshare"
+	"github.com/sirupsen/logrus"
 
 	"parallax/cmd"
 	"parallax/common"
@@ -37,24 +37,34 @@ func main() {
 	})
 
 	switch cli.Op {
-		case common.OpMigrate:
-			if err := common.ValidateRoStore(cli.Config.RoStoragePath); err != nil {
-				logrus.Fatalf("Storage validation failed before migration: %v", err)
-			}
-			_, err := cmd.RunMigration(cli.Config)
-			if err != nil {
-				logrus.Fatalf("Migration failed for image '%s': %v", cli.Config.Image, err)
-			}
-		case common.OpRmi:
-			if err := common.ValidateRoStore(cli.Config.RoStoragePath); err != nil {
-				logrus.Fatalf("Storage validation failed before rmi: %v", err)
-			}
-			err = cmd.RunRmi(cli.Config)
-			if err != nil {
-				logrus.Fatalf("RMI operation failed for image '%s': %v", cli.Config.Image, err)
-			}
-		default:
-			panic("Unknown operation. We should never reach here!")
+	case common.OpMigrate:
+		if err := common.ValidateRoStore(cli.Config.RoStoragePath); err != nil {
+			logrus.Fatalf("Storage validation failed before migration: %v", err)
+		}
+		_, err := cmd.RunMigration(cli.Config)
+		if err != nil {
+			logrus.Fatalf("Migration failed for image '%s': %v", cli.Config.Image, err)
+		}
+	case common.OpRmi:
+		if err := common.ValidateRoStore(cli.Config.RoStoragePath); err != nil {
+			logrus.Fatalf("Storage validation failed before rmi: %v", err)
+		}
+		err = cmd.RunRmi(cli.Config)
+		if err != nil {
+			logrus.Fatalf("RMI operation failed for image '%s': %v", cli.Config.Image, err)
+		}
+	case common.OpExist:
+		if err := common.ValidateRoStore(cli.Config.RoStoragePath); err != nil {
+			logrus.Fatalf("Storage validation failed before exist: %v", err)
+		}
+		exists, err := cmd.RunExist(cli.Config)
+		if err != nil {
+			logrus.Fatalf("Exist operation failed for image '%s': %v", cli.Config.Image, err)
+		}
+		if !exists {
+			os.Exit(1)
+		}
+	default:
+		panic("Unknown operation. We should never reach here!")
 	}
 }
-
