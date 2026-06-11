@@ -63,7 +63,7 @@ Smoke test:
 ### 2. Pull an image
 ~~~
     podman \
-        --root "/path/to/your/podmanroot" \
+        --root "/path/to/podmanroot" \
         --runroot "/path/to/runroot" \
         pull docker.io/library/hello-world:linux
 ~~~
@@ -71,9 +71,9 @@ Smoke test:
 ### 3. Migrate an Image
 ~~~
     parallax \
-        --podmanRoot "/path/to/your/podmanroot" \
-        --roStoragePath "/path/to/your/nfs/parallax/store" \
-        --mksquashfsPath "/path/to/your/mksquashfs/binary" \
+        --podmanRoot "/path/podmanroot" \
+        --roStoragePath "/path/nfs/parallax/store" \
+        --mksquashfsPath "/path/mksquashfs/binary" \
         --log-level info \
         --migrate \
         --image docker.io/library/hello-world:linux
@@ -101,9 +101,9 @@ Note: using `--storage-opt` cli option makes podman ignore the default storage c
 ### 6. Remove an image
 ~~~
     parallax \
-        --podmanRoot "/path/to/your/podmanroot" \
-        --roStoragePath "/path/to/your/nfs/parallax/store" \
-        --mksquashfsPath "/path/to/your/mksquashfs/binary" \
+        --podmanRoot "/path/to/podmanroot" \
+        --roStoragePath "/path/nfs/parallax/store" \
+        --mksquashfsPath "/path/mksquashfs/binary" \
         --log-level info \
         --rmi \
         --image docker.io/library/hello-world:linux
@@ -112,9 +112,9 @@ Note: using `--storage-opt` cli option makes podman ignore the default storage c
 ### 7. Check whether an image exists in the parallax store
 ~~~
     parallax \
-        --roStoragePath "/path/to/your/nfs/parallax/store" \
+        --roStoragePath "/path/nfs/parallax/store" \
         --log-level info \
-        --exist \
+        --exists \
         --image docker.io/library/hello-world:linux
 ~~~
 

@@ -53,7 +53,7 @@ exist_image() {
   "$PARALLAX_BINARY" \
     --roStoragePath "$RO_STORAGE" \
     --log-level info \
-    --exist \
+    --exists \
     --image "$ref"
 }
 

@@ -61,11 +61,11 @@ func main() {
 		}
 	case common.OpExist:
 		if err := common.ValidateRoStore(cli.Config.RoStoragePath); err != nil {
-			logrus.Fatalf("Storage validation failed before exist: %v", err)
+			logrus.Fatalf("Storage validation failed before exists check: %v", err)
 		}
 		exists, err := cmd.RunExist(cli.Config)
 		if err != nil {
-			logrus.Fatalf("Exist operation failed for image '%s': %v", cli.Config.Image, err)
+			logrus.Fatalf("Exists check failed for image '%s': %v", cli.Config.Image, err)
 		}
 		if !exists {
 			os.Exit(1)

@@ -20,7 +20,7 @@ OCI image migration tool for Podman on HPC systems
 
 Usage:
   parallax --migrate --image <image[:tag]> [options]
-  parallax --exist   --image <image[:tag]> [options]
+  parallax --exists  --image <image[:tag]> [options]
   parallax --rmi     --image <image[:tag]> [options]
 
 Options:
@@ -29,7 +29,7 @@ Options:
 	// New flag section
 	order := []string{
 		"migrate",
-		"exist",
+		"exists",
 		"rmi",
 		"image",
 		"podmanRoot",
@@ -49,7 +49,7 @@ Options:
 	fmt.Fprintf(out, `
 Examples:
   parallax --migrate --image ubuntu:latest
-  parallax --exist   --image ubuntu:latest
+  parallax --exists  --image ubuntu:latest
   parallax --rmi     --image alpine:3.18
 
 `)
@@ -103,7 +103,8 @@ func ParseAndValidateFlags(fs *flag.FlagSet, args []string) (*CLI, error) {
 	image      := fs.String("image", "", "The image reference to operate on")
 	logLevelF  := fs.String("log-level", "info", "Logging level (debug, info, warn, error, fatal, panic)")
 	migrateF   := fs.Bool("migrate", false, "Migrates an image")
-	existF     := fs.Bool("exist", false, "Checks whether an image exists in the read-only storage")
+	existsF    := fs.Bool("exists", false, "Checks whether an image exists in the read-only storage")
+	existF     := fs.Bool("exist", false, "Alias for --exists")
 	rmiF       := fs.Bool("rmi", false, "Removes an image")
 	versionF   := fs.Bool("version", false, "Print version")
 
@@ -125,14 +126,15 @@ func ParseAndValidateFlags(fs *flag.FlagSet, args []string) (*CLI, error) {
 	if *migrateF {
 		selectedOps++
 	}
-	if *existF {
+	existRequested := *existsF || *existF
+	if existRequested {
 		selectedOps++
 	}
 	if *rmiF {
 		selectedOps++
 	}
 	if selectedOps != 1 {
-		return nil, fmt.Errorf("Must specify exactly one of -migrate, -exist, or -rmi")
+		return nil, fmt.Errorf("Must specify exactly one of -migrate, -exists, or -rmi")
 	}
 	// Validate that image is present
 	if *image == "" {
@@ -143,7 +145,7 @@ func ParseAndValidateFlags(fs *flag.FlagSet, args []string) (*CLI, error) {
 	switch {
 	case *migrateF:
 		op = OpMigrate
-	case *existF:
+	case existRequested:
 		op = OpExist
 	case *rmiF:
 		op = OpRmi
