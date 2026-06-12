@@ -75,6 +75,9 @@ ensure_autotools
 export CFLAGS="${CFLAGS:--O2 -pipe}"
 export CPPFLAGS="${CPPFLAGS:-}"
 export LDFLAGS="${LDFLAGS:--static}"
+# Libtool drops plain -static during the final program link for inotify-tools,
+# so force an all-static link at make/install time while leaving configure sane.
+make_ldflags="${MAKE_LDFLAGS:-${LDFLAGS} -all-static}"
 
 git init "${src_dir}" >/dev/null
 git -C "${src_dir}" remote add origin "${INOTIFY_TOOLS_REPO}"
@@ -90,8 +93,8 @@ autoreconf -fi
   --enable-static \
   --prefix="${install_dir}"
 
-make -j"${JOBS}"
-make install
+make -j"${JOBS}" LDFLAGS="${make_ldflags}"
+make LDFLAGS="${make_ldflags}" install
 
 cp "${install_dir}/bin/inotifywait" "${out_path}"
 chmod 0755 "${out_path}"

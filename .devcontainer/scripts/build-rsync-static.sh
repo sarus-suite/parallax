@@ -5,13 +5,26 @@ VERSION="${RSYNC_VERSION:-3.4.1}"
 ROOT_DIR="${ROOT_DIR:-$(pwd)}"
 CACHE_DIR="${CACHE_DIR:-${ROOT_DIR}/.ci-cache/rsync}"
 OUT_DIR="${OUT_DIR:-${ROOT_DIR}/dist/rsync-static}"
-PREFIX_DIR="${PREFIX_DIR:-${CACHE_DIR}/prefix/rsync-${VERSION}}"
 DOWNLOAD_DIR="${CACHE_DIR}/downloads"
-BUILD_DIR="${CACHE_DIR}/build"
 TARBALL="${DOWNLOAD_DIR}/rsync-${VERSION}.tar.gz"
-SRC_DIR="${BUILD_DIR}/rsync-${VERSION}"
 OUTPUT_BIN="${OUT_DIR}/rsync"
 SOURCE_URL="${RSYNC_URL:-https://download.samba.org/pub/rsync/src/rsync-${VERSION}.tar.gz}"
+KEEP_WORKDIR="${KEEP_WORKDIR:-0}"
+WORK_DIR="$(mktemp -d)"
+PREFIX_DIR="${WORK_DIR}/prefix"
+BUILD_DIR="${WORK_DIR}/build"
+SRC_DIR="${BUILD_DIR}/rsync-${VERSION}"
+
+cleanup() {
+  if [ "${KEEP_WORKDIR}" = "1" ]; then
+    log "keeping build workspace at ${WORK_DIR}"
+    return
+  fi
+
+  rm -rf "${WORK_DIR}"
+}
+
+trap cleanup EXIT HUP INT TERM
 
 log() {
   printf '[build-rsync-static] %s\n' "$*"
@@ -43,7 +56,6 @@ configure_build() {
   mkdir -p "$DOWNLOAD_DIR" "$BUILD_DIR" "$OUT_DIR"
   download_if_missing
 
-  rm -rf "$SRC_DIR" "$PREFIX_DIR"
   mkdir -p "$PREFIX_DIR"
   tar -xzf "$TARBALL" -C "$BUILD_DIR"
 
