@@ -32,7 +32,6 @@ func Mirror(srcDir string) (mirrorDir string, cleanup func() error, err error) {
 		"overlay-containers/***",
 		"overlay-images/***",
 		"overlay-layers/***",
-		"squash/***",
 		"storage.lock",
 		"userns.lock",
 	}
@@ -60,9 +59,18 @@ func Mirror(srcDir string) (mirrorDir string, cleanup func() error, err error) {
 		return "", nil, fmt.Errorf("Initial rsync failed: %v\n%s", err2, out)
 	}
 
-	if err := os.MkdirAll(filepath.Join(mirrorPath, "squash"), 0o755); err != nil {
+	// Squash images are potentially large. Keep them outside the rsync mirror so
+	// writes through the temporary store reach the source directly.
+	realSquash := filepath.Join(srcDir, "squash")
+	if err := os.MkdirAll(realSquash, 0o755); err != nil {
 		os.RemoveAll(mp)
-		return "", nil, fmt.Errorf("Failed to create mirror squash dir: %w", err)
+		return "", nil, fmt.Errorf("Failed to create source squash dir: %w", err)
+	}
+
+	linkName := filepath.Join(mp, "squash")
+	if err := os.Symlink(realSquash, linkName); err != nil {
+		os.RemoveAll(mp)
+		return "", nil, fmt.Errorf("Failed to create squash symlink: %w", err)
 	}
 
 	writeBackArgs := append([]string{
@@ -77,6 +85,10 @@ func Mirror(srcDir string) (mirrorDir string, cleanup func() error, err error) {
 	// On cleanup we push the normalized working copy back without changing
 	// destination ownership or access policy.
 	cleanup = func() error {
+		if err := os.Remove(linkName); err != nil {
+			return fmt.Errorf("Failed to remove squash symlink: %w", err)
+		}
+
 		log.Infof("Mirror-cleanup: rsync back from %s to %s", mirrorPath, srcPath)
 		rsyncCmd = append(writeBackArgs, mirrorPath, srcPath)
 		cmdBack := exec.Command("rsync", rsyncCmd...)
