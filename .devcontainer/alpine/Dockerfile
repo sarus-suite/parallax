@@ -1,0 +1,63 @@
+FROM alpine:3.22
+
+ARG GO_VERSION=1.24.0
+
+RUN apk add --no-cache \
+        autoconf \
+        automake \
+        bash \
+        bats \
+        binutils \
+        btrfs-progs \
+        btrfs-progs-dev \
+        build-base \
+        ca-certificates \
+        cargo \
+        curl \
+        file \
+        fuse-overlayfs \
+        fuse3-dev \
+        fuse3-static \
+        git \
+        inotify-tools \
+        libassuan-dev \
+        lz4-dev \
+        lz4-static \
+        libseccomp-dev \
+        libselinux-dev \
+        linux-headers \
+        lzo-dev \
+        lvm2-dev \
+        meson \
+        musl-dev \
+        ninja \
+        pax-utils \
+        podman \
+        protobuf-c-dev \
+        protobuf-dev \
+        pkgconf \
+        rsync \
+        rust \
+        shadow-uidmap \
+        slirp4netns \
+        squashfs-tools \
+        squashfuse \
+        tar \
+        zlib-dev \
+        zstd-dev \
+        libtool \
+        meson \
+        gpgme-dev \
+        xz-dev \
+        xz-static \
+        zlib-dev \
+        zlib-static \
+        zstd-dev \
+        zstd-static
+
+COPY scripts/install-go.sh /tmp/install-go.sh
+RUN chmod 0755 /tmp/install-go.sh && /tmp/install-go.sh "${GO_VERSION}" && rm -f /tmp/install-go.sh
+
+ENV PATH="/usr/local/go/bin:${PATH}"
+
+CMD ["bash"]

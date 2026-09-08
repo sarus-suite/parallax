@@ -7,20 +7,26 @@ import (
 	"time"
 
 	"github.com/containers/storage/pkg/reexec"
-	"github.com/containers/storage/pkg/unshare"
 	"github.com/sirupsen/logrus"
 
 	"parallax/cmd"
 	"parallax/common"
+	"parallax/internal/rootless"
 )
 
 func main() {
-	// Registering reexec for unshare
+	// Register storage reexec handlers before entering normal CLI flow.
 	if reexec.Init() {
 		return
 	}
-	// Enter new user-namespace needed for rootless storage
-	unshare.MaybeReexecUsingUserNamespace(true)
+	// Enter the user namespace needed for rootless storage.
+	reexecResult, err := rootless.MaybeReexec()
+	if err != nil {
+		logrus.Fatalf("Failed to enter rootless user namespace: %v", err)
+	}
+	if reexecResult.Reexecuted {
+		os.Exit(reexecResult.ExitCode)
+	}
 
 	cli, err := common.ParseAndValidateFlags(flag.CommandLine, os.Args[1:])
 	if err != nil {
@@ -55,11 +61,11 @@ func main() {
 		}
 	case common.OpExist:
 		if err := common.ValidateRoStore(cli.Config.RoStoragePath); err != nil {
-			logrus.Fatalf("Storage validation failed before exist: %v", err)
+			logrus.Fatalf("Storage validation failed before exists check: %v", err)
 		}
 		exists, err := cmd.RunExist(cli.Config)
 		if err != nil {
-			logrus.Fatalf("Exist operation failed for image '%s': %v", cli.Config.Image, err)
+			logrus.Fatalf("Exists check failed for image '%s': %v", cli.Config.Image, err)
 		}
 		if !exists {
 			os.Exit(1)

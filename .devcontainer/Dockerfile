@@ -21,16 +21,9 @@ RUN apt-get update && \
         uidmap && \
     rm -rf /var/lib/apt/lists/*
 
-RUN set -eux; \
-    arch="$(dpkg --print-architecture)"; \
-    case "${arch}" in \
-      amd64) goarch='amd64' ;; \
-      arm64) goarch='arm64' ;; \
-      *) echo "Unsupported architecture: ${arch}"; exit 1 ;; \
-    esac; \
-    curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${goarch}.tar.gz" -o /tmp/golang.tar.gz; \
-    rm -rf /usr/local/go; \
-    tar -C /usr/local -xzf /tmp/golang.tar.gz; \
-    rm /tmp/golang.tar.gz
+COPY scripts/install-go.sh /tmp/install-go.sh
+RUN chmod 0755 /tmp/install-go.sh && /tmp/install-go.sh "${GO_VERSION}" && rm -f /tmp/install-go.sh
 
 ENV PATH="/usr/local/go/bin:${PATH}"
+
+CMD ["bash"]

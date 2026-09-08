@@ -1,4 +1,5 @@
 .DS_Store
+.ci-cache/
 
 *.swp
 *.swo
@@ -9,5 +10,6 @@
 *.log
 
 /bin/
+/dist/
 /pkg/
-
+.ci-cache/

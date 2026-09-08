@@ -4,14 +4,14 @@ load helpers.bash
   run \
     "$PARALLAX_BINARY"
   [ "$status" -ne 0 ]
-  [[ "$output" =~ "Must specify exactly one of -migrate, -exist, or -rmi" ]]
+  [[ "$output" =~ "Must specify exactly one of -migrate, -exists, or -rmi" ]]
 }
 
 @test "Fails if multiple operation flags are passed" {
   run \
-    "$PARALLAX_BINARY" -migrate -exist -image ubuntu:latest
+    "$PARALLAX_BINARY" -migrate -exists -image ubuntu:latest
   [ "$status" -ne 0 ]
-  [[ "$output" =~ "Must specify exactly one of -migrate, -exist, or -rmi" ]]
+  [[ "$output" =~ "Must specify exactly one of -migrate, -exists, or -rmi" ]]
 }
 
 @test "Fails if --image is missing" {
@@ -35,7 +35,7 @@ load helpers.bash
   [[ "$output" =~ "OCI image migration tool" ]]
   [[ "$output" =~ "Usage" ]]
   [[ "$output" =~ "-migrate" ]]
-  [[ "$output" =~ "-exist" ]]
+  [[ "$output" =~ "-exists" ]]
   [[ "$output" =~ "-image" ]]
 }
 
@@ -137,9 +137,34 @@ load helpers.bash
     --roStoragePath "$RO_STORAGE" \
     --mksquashfsPath /definitely/missing \
     --log-level info \
+    --exists \
+    --image alpine:latest
+
+  [ "$status" -eq 1 ]
+  [[ "$output" =~ "does not exist in read-only storage" ]]
+}
+
+@test "Exist alias remains supported" {
+  run "$PARALLAX_BINARY" \
+    --podmanRoot /definitely/missing \
+    --roStoragePath "$RO_STORAGE" \
+    --mksquashfsPath /definitely/missing \
+    --log-level info \
     --exist \
     --image alpine:latest
 
   [ "$status" -eq 1 ]
   [[ "$output" =~ "does not exist in read-only storage" ]]
+}
+
+@test "Exists does not initialize an empty read-only store" {
+  run "$PARALLAX_BINARY" \
+    --roStoragePath "$RO_STORAGE" \
+    --log-level info \
+    --exists \
+    --image alpine:latest
+
+  [ "$status" -eq 1 ]
+  [[ "$output" =~ "does not exist in read-only storage" ]]
+  [ -z "$(find "$RO_STORAGE" -mindepth 1 -print -quit)" ]
 }

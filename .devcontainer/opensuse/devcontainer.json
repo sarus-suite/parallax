@@ -1,13 +1,14 @@
 {
-  "name": "Parallax Ubuntu",
+  "name": "Parallax openSUSE",
   "build": {
     "dockerfile": "Dockerfile",
+    "context": "..",
     "args": {
       "GO_VERSION": "1.24.0"
     }
   },
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-  "postCreateCommand": "sh ./.devcontainer/scripts/post-create.sh",
+  "postCreateCommand": "./.devcontainer/scripts/post-create.sh",
   "customizations": {
     "vscode": {
       "extensions": [

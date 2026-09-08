@@ -24,15 +24,15 @@ func RunRmi(cfg common.Config) error {
 	log.Infof("Starting removal of image: %s", cfg.Image)
 	log.Debugf("Podman Root: %s, Read-only Storage Path: %s", cfg.PodmanRoot, cfg.RoStoragePath)
 
-    // we copy mirror the RoStoragePath to hide the fact that might be a networkedFS
-    mirror, mirrorCleanup, err := common.Mirror(cfg.RoStoragePath)
-    if err != nil {
-        log.Debug("Failed to copy mirror: %v", err)
-        return err
-    }
-    log.Infof("Copy mirror of %s at %s", cfg.RoStoragePath, mirror)
-    originalPath := cfg.RoStoragePath
-    cfg.RoStoragePath = mirror
+	// we copy mirror the RoStoragePath to hide the fact that might be a networkedFS
+	mirror, mirrorCleanup, err := common.Mirror(cfg.RoStoragePath)
+	if err != nil {
+		log.Debugf("Failed to copy mirror: %v", err)
+		return err
+	}
+	log.Infof("Copy mirror of %s at %s", cfg.RoStoragePath, mirror)
+	originalPath := cfg.RoStoragePath
+	cfg.RoStoragePath = mirror
 
 	storeRun, cleanupRun := common.MustTempDir("rmi-RoStore-*")
 	log.Infof("Opened store with: %s, %s", cfg.RoStoragePath, storeRun)
@@ -108,4 +108,3 @@ func RemoveSquashFile(cfg common.Config, link string) error {
 	}
 	return nil
 }
-

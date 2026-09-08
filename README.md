@@ -42,13 +42,28 @@ rsync
 ### 1. Build
 ~~~
     go mod tidy
-    go build -o parallax
+    sh ./.devcontainer/scripts/build-static.sh
 ~~~
+This produces a fully static Linux binary at `dist/parallax-static` using the Alpine devcontainer toolchain.
+
+Static helper build scripts:
+
+* `sh ./.devcontainer/scripts/build-inotifywait-static.sh` -> `dist/inotifywait-static`
+* `sh ./.devcontainer/scripts/build-rsync-static.sh` -> `dist/rsync-static/rsync`
+* `sh ./.devcontainer/scripts/build-fuse-overlayfs-static.sh` -> `dist/fuse-overlayfs-static/fuse-overlayfs`
+* `sh ./.devcontainer/scripts/build-mksquashfs-static.sh` -> `dist/squashfs-tools-static/mksquashfs`
+* `sh ./.devcontainer/scripts/build-squashfuse-ll-static.sh` -> `dist/squashfuse-static/squashfuse_ll`
+* `sh ./.devcontainer/scripts/build-fusermount3-static.sh` -> `dist/fusermount3-static/fusermount3`
+
+Smoke test:
+
+* `sh ./.devcontainer/scripts/smoke-test-squashfuse-ll.sh`
+* `sh ./.devcontainer/scripts/smoke-test-fusermount3.sh`
 
 ### 2. Pull an image
 ~~~
     podman \
-        --root "/path/to/your/podmanroot" \
+        --root "/path/to/podmanroot" \
         --runroot "/path/to/runroot" \
         pull docker.io/library/hello-world:linux
 ~~~
@@ -56,9 +71,9 @@ rsync
 ### 3. Migrate an Image
 ~~~
     parallax \
-        --podmanRoot "/path/to/your/podmanroot" \
-        --roStoragePath "/path/to/your/nfs/parallax/store" \
-        --mksquashfsPath "/path/to/your/mksquashfs/binary" \
+        --podmanRoot "/path/podmanroot" \
+        --roStoragePath "/path/nfs/parallax/store" \
+        --mksquashfsPath "/path/mksquashfs/binary" \
         --log-level info \
         --migrate \
         --image docker.io/library/hello-world:linux
@@ -86,9 +101,9 @@ Note: using `--storage-opt` cli option makes podman ignore the default storage c
 ### 6. Remove an image
 ~~~
     parallax \
-        --podmanRoot "/path/to/your/podmanroot" \
-        --roStoragePath "/path/to/your/nfs/parallax/store" \
-        --mksquashfsPath "/path/to/your/mksquashfs/binary" \
+        --podmanRoot "/path/to/podmanroot" \
+        --roStoragePath "/path/nfs/parallax/store" \
+        --mksquashfsPath "/path/mksquashfs/binary" \
         --log-level info \
         --rmi \
         --image docker.io/library/hello-world:linux
@@ -97,9 +112,9 @@ Note: using `--storage-opt` cli option makes podman ignore the default storage c
 ### 7. Check whether an image exists in the parallax store
 ~~~
     parallax \
-        --roStoragePath "/path/to/your/nfs/parallax/store" \
+        --roStoragePath "/path/nfs/parallax/store" \
         --log-level info \
-        --exist \
+        --exists \
         --image docker.io/library/hello-world:linux
 ~~~
 
@@ -152,10 +167,7 @@ Use the provided script [`scripts/parallax-mount-program.sh`](scripts/parallax-m
 6. **Rootless only**
    Parallax has been tested only in a rootless Podman (user-namespace) setup. Running as root is untested and may require extra privileges.
 
-7. **Dynamic Linking Requirement**
-    Parallax relies on the containers/storage Go library in rootless mode, which depends on accessing the unshare system capability for user-namespace operations. This functionality is only available when the Parallax binary is dynamically linked (i.e., not statically compiled). Static binaries will produce start-up errors.
-
-8. **FUSE3 and fusermount3 required**
+7. **FUSE3 and fusermount3 required**
    Parallax is built against FUSE3 and expects `fusermount3`. If you use a `fusermount` version < 3.0, you will see errors like:
 ~~~
   ERROR: Mounting squash file. failed: fuse: mountpoint is not empty
