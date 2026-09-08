@@ -156,3 +156,15 @@ load helpers.bash
   [ "$status" -eq 1 ]
   [[ "$output" =~ "does not exist in read-only storage" ]]
 }
+
+@test "Exists does not initialize an empty read-only store" {
+  run "$PARALLAX_BINARY" \
+    --roStoragePath "$RO_STORAGE" \
+    --log-level info \
+    --exists \
+    --image alpine:latest
+
+  [ "$status" -eq 1 ]
+  [[ "$output" =~ "does not exist in read-only storage" ]]
+  [ -z "$(find "$RO_STORAGE" -mindepth 1 -print -quit)" ]
+}
