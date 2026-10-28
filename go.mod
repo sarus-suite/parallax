@@ -11,6 +11,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/sirupsen/logrus v1.9.3
+	golang.org/x/sys v0.34.0
 )
 
 require (
@@ -49,7 +50,6 @@ require (
 	github.com/vbatts/tar-split v0.12.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/term v0.33.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250313205543-e70fdf4c4cb4 // indirect
 	google.golang.org/grpc v1.72.2 // indirect

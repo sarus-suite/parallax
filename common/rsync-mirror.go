@@ -35,6 +35,8 @@ func Mirror(srcDir string) (mirrorDir string, cleanup func() error, err error) {
 		"storage.lock",
 		"userns.lock",
 	}
+	// Keep .parallax.lock excluded on both passes. Replacing its inode would
+	// let another writer acquire a different lock while this writer still runs.
 
 	includePatterns := []string{}
 	for _, pattern := range allowedPatterns {

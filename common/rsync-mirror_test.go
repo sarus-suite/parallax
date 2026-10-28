@@ -14,6 +14,15 @@ func TestMirrorSymlinksSquashAndWritesBackOverlay(t *testing.T) {
 	}
 
 	srcDir := t.TempDir()
+	release, err := LockRoStore(srcDir, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer release()
+	lockBefore, err := os.Stat(filepath.Join(srcDir, storeLockName))
+	if err != nil {
+		t.Fatal(err)
+	}
 	overlayFile := filepath.Join(srcDir, "overlay", "layer", "data")
 	if err := os.MkdirAll(filepath.Dir(overlayFile), 0o755); err != nil {
 		t.Fatal(err)
@@ -25,6 +34,9 @@ func TestMirrorSymlinksSquashAndWritesBackOverlay(t *testing.T) {
 	mirrorDir, cleanup, err := Mirror(srcDir)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(mirrorDir, storeLockName)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("lock file should not be mirrored: %v", err)
 	}
 
 	linkName := filepath.Join(mirrorDir, "squash")
@@ -57,6 +69,13 @@ func TestMirrorSymlinksSquashAndWritesBackOverlay(t *testing.T) {
 	}
 	if err := cleanup(); err != nil {
 		t.Fatal(err)
+	}
+	lockAfter, err := os.Stat(filepath.Join(srcDir, storeLockName))
+	if err != nil || !os.SameFile(lockBefore, lockAfter) {
+		t.Fatalf("write-back replaced or deleted lock file: %v", err)
+	}
+	if _, err := LockRoStore(srcDir, 0); !errors.Is(err, ErrStoreLockTimeout) {
+		t.Fatalf("write-back should preserve mutual exclusion: %v", err)
 	}
 
 	contents, err := os.ReadFile(overlayFile)

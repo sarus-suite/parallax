@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/mattn/go-shellwords"
+	"github.com/sirupsen/logrus"
 )
 
 func usage_banner() {
@@ -36,6 +37,7 @@ Options:
 		"roStoragePath",
 		"mksquashfsPath",
 		"mksquashfs-opts",
+		"lock-timeout",
 		"log-level",
 		"version",
 	}
@@ -88,25 +90,26 @@ const (
 )
 
 type CLI struct {
-	Config Config
-	Op Operation
-	LogLevel logrus.Level
+	Config    Config
+	Op        Operation
+	LogLevel  logrus.Level
 	ShowUsage bool //use for -h
 }
 
 func ParseAndValidateFlags(fs *flag.FlagSet, args []string) (*CLI, error) {
 	// flag declaration
 	podmanRoot := fs.String("podmanRoot", "/var/lib/containers/storage", "Path to Podman root storage directory")
-	roStorage  := fs.String("roStoragePath", "/mnt/nfs/podman", "Path to read-only storage location")
+	roStorage := fs.String("roStoragePath", "/mnt/nfs/podman", "Path to read-only storage location")
 	mksquashfs := fs.String("mksquashfsPath", "/usr/bin/mksquashfs", "Path to mksquashfs binary")
-	mksOptsF   := fs.String("mksquashfs-opts", "", "Parameters for mksquashfs")
-	image      := fs.String("image", "", "The image reference to operate on")
-	logLevelF  := fs.String("log-level", "info", "Logging level (debug, info, warn, error, fatal, panic)")
-	migrateF   := fs.Bool("migrate", false, "Migrates an image")
-	existsF    := fs.Bool("exists", false, "Checks whether an image exists in the read-only storage")
-	existF     := fs.Bool("exist", false, "Alias for --exists")
-	rmiF       := fs.Bool("rmi", false, "Removes an image")
-	versionF   := fs.Bool("version", false, "Print version")
+	mksOptsF := fs.String("mksquashfs-opts", "", "Parameters for mksquashfs")
+	lockTimeout := fs.Duration("lock-timeout", 5*time.Minute, "Maximum wait for the image store lock (migrate and rmi; 0 attempts once)")
+	image := fs.String("image", "", "The image reference to operate on")
+	logLevelF := fs.String("log-level", "info", "Logging level (debug, info, warn, error, fatal, panic)")
+	migrateF := fs.Bool("migrate", false, "Migrates an image")
+	existsF := fs.Bool("exists", false, "Checks whether an image exists in the read-only storage")
+	existF := fs.Bool("exist", false, "Alias for --exists")
+	rmiF := fs.Bool("rmi", false, "Removes an image")
+	versionF := fs.Bool("version", false, "Print version")
 
 	// Pass the new help banner
 	fs.Usage = usage_banner
@@ -152,6 +155,9 @@ func ParseAndValidateFlags(fs *flag.FlagSet, args []string) (*CLI, error) {
 	}
 
 	// Argument validation
+	if op != OpExist && *lockTimeout < 0 {
+		return nil, fmt.Errorf("lock-timeout must not be negative")
+	}
 	if err := IsDir(*roStorage); err != nil {
 		return nil, fmt.Errorf("roStoragePath. Read-only storage path: %w", err)
 	}
@@ -189,8 +195,9 @@ func ParseAndValidateFlags(fs *flag.FlagSet, args []string) (*CLI, error) {
 			MksquashfsPath: *mksquashfs,
 			Image:          *image,
 			MksquashfsOpts: opts,
+			LockTimeout:    *lockTimeout,
 		},
-		Op: op,
+		Op:       op,
 		LogLevel: level,
 	}, nil
 }

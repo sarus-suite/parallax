@@ -147,6 +147,35 @@ Use the provided script [`scripts/parallax-mount-program.sh`](scripts/parallax-m
 * Robust logging. Structured logging via logrus library, for enhancing debugging and monitoring.
 * Strong Error Handling. We try to enforce good use of error handling, explicit logging of issues, and graceful shutdowns.
 
+## Concurrent migrations and removals
+
+`--migrate` and `--rmi` take an exclusive lock on `.parallax.lock` in the
+destination store before reading or modifying it. The lock covers the complete
+local mirror and write-back cycle, so commands for different images in the same
+store also run sequentially. Commands using different stores can run concurrently.
+
+The default wait is five minutes. Set `--lock-timeout 30m` for longer migrations,
+or `--lock-timeout 0` to fail immediately when another writer holds the lock.
+Negative durations are invalid. Timeout and write-back failures return a nonzero
+exit status; successful completion is reported after write-back finishes.
+`--exists` does not acquire this lock.
+
+Keep `.parallax.lock` in place even when no writer is running: deleting or replacing
+it can let writers acquire locks on different files. Normal process exit or
+termination releases the kernel lock; no stale-file removal is needed. The lock
+file uses the creating process's umask, and all writers need write access to it.
+
+Upgrade all writers together. Older Parallax binaries, direct Podman writes to the
+destination, and manual file changes do not honor this advisory lock. The source
+Podman store is not protected by this lock, and readers can still observe a
+write-back in progress. This mechanism does not make publication crash-atomic.
+
+Shared filesystems must support cross-host `flock` locking. In particular, NFS
+mount options such as `local_lock=flock` or `local_lock=all` can limit locks to one
+host. Before deployment, hold the store's lock on one host and verify that a writer
+on another host waits or times out, then succeeds after release. See the
+[Linux NFS locking documentation](https://man7.org/linux/man-pages/man2/flock.2.html).
+
 ## Disclaimers
 
 1. **Linux kernel & FUSE required**  

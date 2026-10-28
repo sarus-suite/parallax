@@ -21,11 +21,27 @@ import (
 	"parallax/common"
 )
 
-func RunMigration(cfg common.Config) (*storage.Image, error) {
+func RunMigration(cfg common.Config) (image *storage.Image, err error) {
 	log = log.WithField("sub", "migration")
 	log.Infof("Starting migration for image: %s", cfg.Image)
 	log.Debugf("Podman Root: %s, Read-only Storage Path: %s, mksquashfs Path: %s",
 		cfg.PodmanRoot, cfg.RoStoragePath, cfg.MksquashfsPath)
+	alreadyMigrated := false
+	defer func() {
+		if err != nil {
+			return
+		}
+		if alreadyMigrated {
+			log.Info("Image already migrated. Nothing to do.")
+		} else if image != nil {
+			log.Infof("Migration successfully completed for image: %s", image.ID)
+		}
+	}()
+	release, err := lockAndValidateStore(&cfg)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { err = errors.Join(err, release()) }()
 
 	name := cfg.Image
 	_, names, err := resolveImageNames(name)
@@ -37,18 +53,21 @@ func RunMigration(cfg common.Config) (*storage.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer cleanupSrcStore()
+	defer func() { err = errors.Join(err, cleanupSrcStore()) }()
 
 	scratchStore, cleanupScratch, err := setupScratchStore(&cfg)
 	if err != nil {
 		return nil, err
 	}
-	defer cleanupScratch()
+	defer func() { err = errors.Join(err, cleanupScratch()) }()
 
 	migrated, err := checkIfMigrated(name, cfg, scratchStore)
-	if err != nil || migrated {
-		log.Infof("Image already migrated. Nothing to do.")
+	if err != nil {
 		return nil, err
+	}
+	if migrated {
+		alreadyMigrated = true
+		return nil, nil
 	}
 
 	srcImg, mountPoint, cleanupSrc, err := prepareAndMountSourceImage(name, cfg, srcStore)
@@ -93,7 +112,6 @@ func RunMigration(cfg common.Config) (*storage.Image, error) {
 		return nil, err
 	}
 
-	log.Infof("Migration successfully completed for image: %s", flatImg.ID)
 	return flatImg, nil
 }
 
@@ -209,11 +227,14 @@ func FlattenViaTar(mountPoint, layerID string) (godigest.Digest, int64, error) {
 	return digester.Digest(), counter.Count, nil
 }
 
-func setupSrcStore(cfg common.Config) (storage.Store, func(), error) {
+func setupSrcStore(cfg common.Config) (storage.Store, func() error, error) {
 	sublog := log.WithField("fn", "setupSrcStore")
 
 	sublog.Info("Setting up SRC Store")
-	srcRun, cleanupRun := common.MustTempDir("src-runroot-*")
+	srcRun, cleanupRun, err := common.TempDir("src-runroot-*")
+	if err != nil {
+		return nil, nil, err
+	}
 	srcStore, err := storage.GetStore(storage.StoreOptions{
 		GraphRoot:       cfg.PodmanRoot,
 		RunRoot:         srcRun,
@@ -221,16 +242,21 @@ func setupSrcStore(cfg common.Config) (storage.Store, func(), error) {
 	})
 	if err != nil {
 		sublog.Debug("Failed to setup SRC store.")
+		cleanupRun()
 		return nil, nil, err
 	}
-	cleanup := func() {
-		srcStore.Shutdown(false)
+	cleanup := func() error {
+		_, err := srcStore.Shutdown(false)
 		cleanupRun()
+		if err != nil {
+			return fmt.Errorf("shutdown source store: %w", err)
+		}
+		return nil
 	}
 	return srcStore, cleanup, nil
 }
 
-func setupScratchStore(cfg *common.Config) (storage.Store, func(), error) {
+func setupScratchStore(cfg *common.Config) (storage.Store, func() error, error) {
 	sublog := log.WithField("fn", "setupScratchStore")
 
 	// we copy mirror the RoStoragePath to hide the fact that might be a networkedFS
@@ -244,7 +270,11 @@ func setupScratchStore(cfg *common.Config) (storage.Store, func(), error) {
 	cfg.RoStoragePath = mirror
 
 	sublog.Info("Setting up scratch Store")
-	scratchRun, cleanupScratch := common.MustTempDir("scratch-runroot-*")
+	scratchRun, cleanupScratch, err := common.TempDir("scratch-runroot-*")
+	if err != nil {
+		cfg.RoStoragePath = originalPath
+		return nil, nil, errors.Join(err, os.RemoveAll(mirror))
+	}
 	scratchStore, err := storage.GetStore(storage.StoreOptions{
 		GraphRoot:       cfg.RoStoragePath,
 		RunRoot:         scratchRun,
@@ -252,13 +282,18 @@ func setupScratchStore(cfg *common.Config) (storage.Store, func(), error) {
 	})
 	if err != nil {
 		sublog.Debug("Failed to setup scratch store.")
-		return nil, nil, err
-	}
-	cleanup := func() {
 		cfg.RoStoragePath = originalPath
-		scratchStore.Shutdown(false)
 		cleanupScratch()
-		mirrorCleanup()
+		return nil, nil, errors.Join(err, os.RemoveAll(mirror))
+	}
+	cleanup := func() error {
+		cfg.RoStoragePath = originalPath
+		_, shutdownErr := scratchStore.Shutdown(false)
+		cleanupScratch()
+		if shutdownErr != nil {
+			shutdownErr = fmt.Errorf("shutdown destination store: %w", shutdownErr)
+		}
+		return errors.Join(shutdownErr, mirrorCleanup())
 	}
 	return scratchStore, cleanup, nil
 }
