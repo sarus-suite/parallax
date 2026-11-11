@@ -360,6 +360,26 @@ cleanup_temp_lowerdir_mountpoint() {
     fi
 }
 
+resolve_lowerdir() {
+    local requested_lowerdir="$1"
+    local BASENAME=$(basename $requested_lowerdir)
+
+    # PODMAN v5
+    if [ "$BASENAME" != "diff" ]
+    then
+      echo $requested_lowerdir
+      return
+    fi
+
+    # PODMAN v6
+    local PARENT_DIR=$(dirname $requested_lowerdir)
+    local LINK_FILE="${PARENT_DIR}/link"
+    local LAYER_ID=$(cat ${LINK_FILE})
+    local OVERLAY_DIR=$(dirname ${PARENT_DIR})
+
+    echo "${OVERLAY_DIR}/l/${LAYER_ID}"
+}
+
 #########################
 # Watcher unmount process
 #########################
@@ -428,7 +448,8 @@ main() {
     verify_dependencies
 
     # Extract lower directory and squash file
-    LOWER_DIR=$(echo "$@" | sed 's/,upperdir.*//' | sed 's/.*lowerdir=//' | sed 's/.*://')
+    REQUESTED_LOWER_DIR=$(echo "$@" | sed 's/,upperdir.*//' | sed 's/.*lowerdir=//' | sed 's/.*://')
+    LOWER_DIR=$(resolve_lowerdir "${REQUESTED_LOWER_DIR}")
     MOUNT_DIR=$(echo "$@" | sed 's/.* //')
     local TEMP_LOWER_DIR=""
     local FUSE_MOUNT_ARGS=()
