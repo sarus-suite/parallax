@@ -1,11 +1,14 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/containers/image/v5/docker/reference"
 	"github.com/containers/image/v5/pkg/shortnames"
 	"github.com/containers/storage"
+	"github.com/opencontainers/go-digest"
 )
 
 
@@ -69,40 +72,86 @@ func CanonicalImageName(ref string) (string, error) {
 }
 
 func FindImage(store storage.Store, name string) (storage.Image, error) {
-    imgs, err := store.Images()
-    if err != nil {
-        return storage.Image{}, fmt.Errorf("List images: %w", err)
-    }
+	// Storage resolves exact names, full IDs, and unique ID prefixes.
+	if img, err := store.Image(name); err == nil {
+		return *img, nil
+	} else if !errors.Is(err, storage.ErrImageUnknown) {
+		return storage.Image{}, fmt.Errorf("Find image %q: %w", name, err)
+	}
 
-    base, tag := splitNameTag(name)
+	// Manifest digests use a separate index. For named digests, also
+	// require a matching repository so a different name cannot select it.
+	d, digestErr := digest.Parse(name)
+	repository := ""
+	if named, err := reference.ParseNormalizedNamed(name); err == nil {
+		if digested, ok := named.(reference.Digested); ok {
+			d, digestErr = digested.Digest(), nil
+			repository = named.Name()
+		}
+	}
+	if digestErr == nil {
+		matches, err := store.ImagesByDigest(d)
+		if err != nil {
+			return storage.Image{}, fmt.Errorf("Find image by digest %q: %w", name, err)
+		}
+		var match *storage.Image
+		for _, img := range matches {
+			if repository != "" {
+				matchesRepository := false
+				for _, n := range img.Names {
+					if named, err := reference.ParseNormalizedNamed(n); err == nil && named.Name() == repository {
+						matchesRepository = true
+						break
+					}
+				}
+				if !matchesRepository {
+					continue
+				}
+			}
+			if match != nil && match.ID != img.ID {
+				return storage.Image{}, fmt.Errorf("Ambiguous image digest: %q", name)
+			}
+			match = img
+		}
+		if match != nil {
+			return *match, nil
+		}
+		return storage.Image{}, fmt.Errorf("Image not found: %q", name)
+	}
 
-    // Build candidate name options
-    normalized := fmt.Sprintf("%s:%s", base, tag)
+	imgs, err := store.Images()
+	if err != nil {
+		return storage.Image{}, fmt.Errorf("List images: %w", err)
+	}
 
-    localhostName := ""
-    if !hasRegistry(base) {
-        localhostName = fmt.Sprintf("localhost/%s:%s", base, tag)
-    }
+	base, tag := splitNameTag(name)
 
-    canonical := ""
-    if fq, err := CanonicalImageName(name); err == nil {
-        canonical = fq
-    }
+	// Build candidate name options
+	normalized := fmt.Sprintf("%s:%s", base, tag)
+
+	localhostName := ""
+	if !hasRegistry(base) {
+		localhostName = fmt.Sprintf("localhost/%s:%s", base, tag)
+	}
+
+	canonical := ""
+	if fq, err := CanonicalImageName(name); err == nil {
+		canonical = fq
+	}
 
 	// loop over all images and its name for a match
-    for _, img := range imgs {
-        for _, n := range img.Names {
-            isExactName := (n == name)
+	for _, img := range imgs {
+		for _, n := range img.Names {
 			isNormalized := (n == normalized)
 			isLocalhost := (n == localhostName)
 			isCanonical := (n == canonical)
 
-			if isExactName || isNormalized || isLocalhost || isCanonical {
-                return img, nil
-            }
-        }
-    }
+			if isNormalized || isLocalhost || isCanonical {
+				return img, nil
+			}
+		}
+	}
 
-    return storage.Image{}, fmt.Errorf("Image not found: %q", name)
+	return storage.Image{}, fmt.Errorf("Image not found: %q", name)
 }
 
