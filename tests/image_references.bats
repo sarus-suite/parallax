@@ -220,6 +220,31 @@ cleanup_registries_conf() {
   assert_failure
 }
 
+@test "remove image by image ID" {
+  local ref="docker.io/library/alpine:3.22.1"
+  run pull_image "$ref"
+  assert_success
+  run migrate_image "$ref"
+  assert_success
+  assert_output --partial 'Migration successfully completed'
+
+  # Use the migrated image's short ID, as displayed by podman images.
+  run inspect_migrated_image "$ref" '{{.Id}}'
+  assert_success
+  [[ "$output" =~ ^[0-9a-f]{64}$ ]]
+  local image_id="$output"
+
+  run rmi_image "${image_id:0:12}"
+  assert_success
+  assert_output --partial 'Removal successfully completed'
+
+  run exist_image "$ref"
+  assert_failure
+  assert_output --partial 'does not exist in read-only storage'
+  run list_squash_files
+  assert_failure
+}
+
 @test "image name not tagged: alpine" {
   setup_registries_conf_with_alpine_alias
 
