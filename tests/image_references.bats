@@ -36,7 +36,7 @@ run_image() {
     --runroot "$PODMAN_RUNROOT" \
     --storage-opt additionalimagestore="$RO_STORAGE" \
     --storage-opt mount_program="$MOUNT_PROGRAM_PATH" \
-    run --rm $PODMAN_RUN_OPTIONS "$ref" echo ok
+    run --pull=never --rm $PODMAN_RUN_OPTIONS "$ref" echo ok
 }
 
 rmi_image() {
@@ -185,6 +185,82 @@ cleanup_registries_conf() {
   run exist_image "$digest_ref"
   assert_success
   assert_output --partial 'exists in read-only storage'
+}
+
+@test "migrate a tagged digest and replace the tag with a different source digest" {
+  local repo="docker.io/library/alpine"
+  local source="$repo:3.22.1"
+  local ref="$repo:parallax-digest-test"
+  local original_digest
+  prepare_alternate_digest_image "$source"
+  run inspect_source_image "$source" '{{.Digest}}'
+  assert_success
+  local primary_digest="$output"
+  [[ "$original_digest" == sha256:* && "$primary_digest" == sha256:* ]]
+  [ "$primary_digest" != "$original_digest" ]
+
+  # Leave a partial squash file behind so the retry exercises cleanup.
+  local failing_squash="$BATS_TEST_TMPDIR/failing-squash"
+  cat > "$failing_squash" <<'EOF'
+#!/bin/sh
+touch "$2"
+exit 1
+EOF
+  chmod +x "$failing_squash"
+
+  MKSQUASHFS_PATH="$failing_squash" run migrate_image "$ref@$original_digest"
+  assert_failure
+  assert_output --partial 'mksquashfs:'
+  run ls -A "$RO_STORAGE"
+  assert_success
+  assert_output ""
+
+  run migrate_image "$ref@$original_digest"
+  assert_success
+  assert_output --partial 'Migration successfully completed'
+  run inspect_migrated_image "$ref" '{{.Id}}'
+  assert_success
+  local first_id="$output"
+  run inspect_migrated_image "$ref" '{{range .RepoTags}}{{println .}}{{end}}'
+  assert_success
+  assert_output "$ref"
+  run inspect_migrated_image "$ref" '{{.Digest}}'
+  assert_success
+  local flat_digest="$output"
+  [[ "$flat_digest" == sha256:* && "$flat_digest" != "$original_digest" ]]
+  run inspect_migrated_image "$ref" '{{range .RepoDigests}}{{println .}}{{end}}'
+  assert_success
+  assert_line "$repo@$original_digest"
+  assert_line "$repo@$flat_digest"
+  run exist_image "$repo@$original_digest"
+  assert_success
+  run run_image "$ref"
+  assert_success
+  assert_output "ok"
+
+  run migrate_image "$ref@$original_digest"
+  assert_success
+  assert_output --partial 'Nothing to do.'
+  run inspect_migrated_image "$ref" '{{.Id}}'
+  assert_success
+  assert_output "$first_id"
+
+  MKSQUASHFS_PATH="$failing_squash" run migrate_image "$ref@$primary_digest"
+  assert_failure
+  assert_output --partial 'mksquashfs:'
+  run inspect_migrated_image "$ref" '{{.Id}}'
+  assert_success
+  assert_output "$first_id"
+
+  run migrate_image "$ref@$primary_digest"
+  assert_success
+  run inspect_migrated_image "$ref" '{{.Id}}'
+  assert_success
+  [ "$output" != "$first_id" ]
+  run exist_image "$repo@$primary_digest"
+  assert_success
+  run exist_image "$first_id"
+  assert_success
 }
 
 @test "remove image by reference with digest" {
