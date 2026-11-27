@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/containers/image/v5/docker/reference"
 	imgmanifest "github.com/containers/image/v5/manifest"
 	"github.com/containers/storage"
 	"github.com/containers/storage/pkg/archive"
@@ -21,16 +22,27 @@ import (
 	"parallax/common"
 )
 
-func RunMigration(cfg common.Config) (*storage.Image, error) {
+func RunMigration(cfg common.Config) (image *storage.Image, retErr error) {
 	log = log.WithField("sub", "migration")
 	log.Infof("Starting migration for image: %s", cfg.Image)
 	log.Debugf("Podman Root: %s, Read-only Storage Path: %s, mksquashfs Path: %s",
 		cfg.PodmanRoot, cfg.RoStoragePath, cfg.MksquashfsPath)
 
 	name := cfg.Image
-	_, names, err := resolveImageNames(name)
+	target, sourceDigest, err := parseTaggedMigration(name)
 	if err != nil {
 		return nil, err
+	}
+	var names []string
+	sourceRef := name
+	if target == nil {
+		_, names, err = resolveImageNames(name)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		name = target.String()
+		sourceRef = target.Name() + "@" + sourceDigest.String()
 	}
 
 	srcStore, cleanupSrcStore, err := setupSrcStore(cfg)
@@ -39,23 +51,53 @@ func RunMigration(cfg common.Config) (*storage.Image, error) {
 	}
 	defer cleanupSrcStore()
 
-	scratchStore, cleanupScratch, err := setupScratchStore(&cfg)
+	scratchStore, finishScratch, err := setupScratchStore(&cfg)
 	if err != nil {
 		return nil, err
 	}
-	defer cleanupScratch()
+	// The ordinary migration path has always written back its scratch store.
+	commit := target == nil
+	var newSquash string
+	defer func() {
+		if !commit && newSquash != "" {
+			retErr = errors.Join(retErr, RemoveSquashFile(cfg, newSquash))
+		}
+		if err := finishScratch(commit); err != nil {
+			retErr = errors.Join(retErr, err)
+			image = nil
+		}
+		if retErr == nil && image != nil {
+			log.Infof("Migration successfully completed for image: %s", image.ID)
+		}
+	}()
 
-	migrated, err := checkIfMigrated(name, cfg, scratchStore)
-	if err != nil || migrated {
-		log.Infof("Image already migrated. Nothing to do.")
+	var migrated bool
+	if target == nil {
+		migrated, err = checkIfMigrated(name, cfg, scratchStore)
+	} else {
+		migrated, err = taggedMigrationComplete(name, sourceDigest, cfg, scratchStore)
+	}
+	if err != nil {
 		return nil, err
 	}
+	if migrated {
+		log.Infof("Image already migrated. Nothing to do.")
+		return nil, nil
+	}
 
-	srcImg, mountPoint, cleanupSrc, err := prepareAndMountSourceImage(name, cfg, srcStore)
+	srcImg, mountPoint, cleanupSrc, err := prepareAndMountSourceImage(sourceRef, cfg, srcStore)
 	if err != nil {
 		return nil, err
 	}
 	defer cleanupSrc()
+
+	var sourceManifest []byte
+	if target != nil {
+		sourceManifest, err = readSourceManifest(srcStore, srcImg, sourceDigest)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	layerDigest, size, dummyDir, cleanupDummy, err := createDummyFlatLayer(name, srcImg)
 	if err != nil {
@@ -73,7 +115,10 @@ func RunMigration(cfg common.Config) (*storage.Image, error) {
 		return nil, err
 	}
 
-	err = createSquashSidecarFromMount(mountPoint, overlayLink, cfg)
+	created, err := createSquashSidecarFromMount(mountPoint, overlayLink, cfg)
+	if created {
+		newSquash = overlayLink
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -93,8 +138,80 @@ func RunMigration(cfg common.Config) (*storage.Image, error) {
 		return nil, err
 	}
 
-	log.Infof("Migration successfully completed for image: %s", flatImg.ID)
+	if target != nil {
+		if err := scratchStore.SetImageBigData(flatImg.ID, sourceManifestKey(sourceDigest), sourceManifest, imgmanifest.Digest); err != nil {
+			return nil, fmt.Errorf("save source manifest for %s: %w", sourceRef, err)
+		}
+		if err := scratchStore.AddNames(flatImg.ID, []string{name}); err != nil {
+			return nil, fmt.Errorf("publish migration tag %s: %w", name, err)
+		}
+		flatImg, err = scratchStore.Image(flatImg.ID)
+		if err != nil {
+			return nil, err
+		}
+		commit = true
+	}
 	return flatImg, nil
+}
+
+func parseTaggedMigration(input string) (reference.NamedTagged, godigest.Digest, error) {
+	tagPart, _, hasDigest := strings.Cut(input, "@")
+	if !hasDigest {
+		return nil, "", nil
+	}
+	name, _ := reference.ParseNormalizedNamed(tagPart)
+	target, ok := name.(reference.NamedTagged)
+	if !ok {
+		return nil, "", nil
+	}
+	parsed, err := reference.ParseNormalizedNamed(input)
+	if err != nil {
+		return nil, "", fmt.Errorf("parse migration reference %q: %w", input, err)
+	}
+	return target, parsed.(reference.Digested).Digest(), nil
+}
+
+// A manifest-prefixed key indexes the source digest. The default manifest and
+// the digest-specific keys used to serve image content keep their usual meaning.
+func sourceManifestKey(digest godigest.Digest) string {
+	return storage.ImageDigestManifestBigDataNamePrefix + "-parallax-source-" + digest.String()
+}
+
+func readSourceManifest(store storage.Store, image *storage.Image, digest godigest.Digest) ([]byte, error) {
+	keys := []string{storage.ImageDigestBigDataKey}
+	for key, recorded := range image.BigDataDigests {
+		if key != storage.ImageDigestBigDataKey && strings.HasPrefix(key, storage.ImageDigestManifestBigDataNamePrefix) && recorded == digest {
+			keys = append(keys, key)
+		}
+	}
+	for _, key := range keys {
+		blob, err := store.ImageBigData(image.ID, key)
+		if err != nil {
+			return nil, fmt.Errorf("read source manifest %q: %w", key, err)
+		}
+		matches, err := imgmanifest.MatchesDigest(blob, digest)
+		if err != nil {
+			return nil, fmt.Errorf("verify source manifest %q: %w", key, err)
+		}
+		if matches {
+			return blob, nil
+		}
+	}
+	return nil, fmt.Errorf("source manifest %s is unavailable in image %s", digest, image.ID)
+}
+
+func taggedMigrationComplete(tag string, digest godigest.Digest, cfg common.Config, store storage.Store) (bool, error) {
+	image, err := store.Image(tag)
+	if errors.Is(err, storage.ErrImageUnknown) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if image.TopLayer == "" || image.BigDataDigests[sourceManifestKey(digest)] != digest {
+		return false, nil
+	}
+	return checkIfMigrated(image.ID, cfg, store)
 }
 
 func resolveImageNames(name string) (string, []string, error) {
@@ -230,35 +347,64 @@ func setupSrcStore(cfg common.Config) (storage.Store, func(), error) {
 	return srcStore, cleanup, nil
 }
 
-func setupScratchStore(cfg *common.Config) (storage.Store, func(), error) {
+func setupScratchStore(cfg *common.Config) (storage.Store, func(bool) error, error) {
 	sublog := log.WithField("fn", "setupScratchStore")
 
+	sharedPath, err := filepath.Abs(cfg.RoStoragePath)
+	if err != nil {
+		return nil, nil, err
+	}
+	squashDir := filepath.Join(sharedPath, "squash")
+	_, err = os.Lstat(squashDir)
+	squashDirMissing := errors.Is(err, os.ErrNotExist)
+	if err != nil && !squashDirMissing {
+		return nil, nil, err
+	}
+	removeNewSquashDir := func() error {
+		if squashDirMissing {
+			if err := os.Remove(squashDir); err != nil && !errors.Is(err, os.ErrNotExist) {
+				return err
+			}
+		}
+		return nil
+	}
+
 	// we copy mirror the RoStoragePath to hide the fact that might be a networkedFS
-	mirror, mirrorCleanup, err := common.Mirror(cfg.RoStoragePath)
+	mirror, writeBack, err := common.Mirror(sharedPath)
 	if err != nil {
 		sublog.Debugf("Failed to copy mirror: %v", err)
-		return nil, nil, err
+		return nil, nil, errors.Join(err, removeNewSquashDir())
 	}
 	sublog.Infof("Copy mirror of %s at %s", cfg.RoStoragePath, mirror)
 	originalPath := cfg.RoStoragePath
-	cfg.RoStoragePath = mirror
+	discard := func() error {
+		return errors.Join(os.RemoveAll(mirror), removeNewSquashDir())
+	}
 
 	sublog.Info("Setting up scratch Store")
-	scratchRun, cleanupScratch := common.MustTempDir("scratch-runroot-*")
+	scratchRun, cleanupScratch, err := common.TempDir("scratch-runroot-*")
+	if err != nil {
+		return nil, nil, errors.Join(err, discard())
+	}
 	scratchStore, err := storage.GetStore(storage.StoreOptions{
-		GraphRoot:       cfg.RoStoragePath,
+		GraphRoot:       mirror,
 		RunRoot:         scratchRun,
 		GraphDriverName: "overlay",
 	})
 	if err != nil {
 		sublog.Debug("Failed to setup scratch store.")
-		return nil, nil, err
-	}
-	cleanup := func() {
-		cfg.RoStoragePath = originalPath
-		scratchStore.Shutdown(false)
 		cleanupScratch()
-		mirrorCleanup()
+		return nil, nil, errors.Join(err, discard())
+	}
+	cfg.RoStoragePath = mirror
+	cleanup := func(commit bool) error {
+		cfg.RoStoragePath = originalPath
+		_, shutdownErr := scratchStore.Shutdown(false)
+		cleanupScratch()
+		if !commit {
+			return errors.Join(shutdownErr, discard())
+		}
+		return errors.Join(shutdownErr, writeBack())
 	}
 	return scratchStore, cleanup, nil
 }
@@ -346,12 +492,14 @@ func readOverlayLink(layer *storage.Layer, cfg common.Config) (string, error) {
 	return strings.TrimSpace(string(linkBytes)), nil
 }
 
-func createSquashSidecarFromMount(srcDir, link string, cfg common.Config) error {
+func createSquashSidecarFromMount(srcDir, link string, cfg common.Config) (bool, error) {
 	sublog := log.WithField("fn", "createSquash")
 	sublog.Info("Building squash file")
 
 	squashPath := filepath.Join(cfg.RoStoragePath, "squash", link+".squash")
+	created := false
 	if _, err := os.Stat(squashPath); errors.Is(err, os.ErrNotExist) {
+		created = true
 
 		// Choose default or user provided flags
 		defaultFlags := []string{
@@ -370,17 +518,19 @@ func createSquashSidecarFromMount(srcDir, link string, cfg common.Config) error 
 		arg := append([]string{srcDir, squashPath}, flags...)
 		cmd := exec.Command(cfg.MksquashfsPath, arg...)
 		if out, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("mksquashfs: %v\n%s", err, out)
+			return created, fmt.Errorf("mksquashfs: %w\n%s", err, out)
 		}
+	} else if err != nil {
+		return false, err
 	}
 
 	sublog.Info("Symlinking squash")
 	lDir := filepath.Join(cfg.RoStoragePath, "overlay", "l")
 	if err := os.MkdirAll(lDir, 0o755); err != nil {
-		return err
+		return created, err
 	}
 
-	return ensureSymlink(filepath.Join("..", "..", "squash", link+".squash"), filepath.Join(lDir, link+".squash"))
+	return created, ensureSymlink(filepath.Join("..", "..", "squash", link+".squash"), filepath.Join(lDir, link+".squash"))
 }
 
 func ensureSymlink(target, linkname string) error {
